@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 /*
- * vDrip9928 concrete video backend. It owns the VrEmuTms9918 instance and knows
+ * vDrip9928 concrete video backend. It owns the VDrip9928 instance and knows
  * how Virtual Drip VDP_CTRL_WRITE/VDP_DATA_WRITE packets map to the TMS9918
  * address and data ports. Identical to the TMS9928 backend except it links
  * against the vdrip_vdp fork (which adds Text 2 80-column mode).
@@ -14,7 +14,7 @@
 
 /** Private backend state owned by VideoDevice::impl. */
 typedef struct {
-    VrEmuTms9918 *tms9918;
+    VDrip9928 *tms9918;
     size_t control_writes;
     size_t data_writes;
 } Vdrip9928Device;
@@ -54,10 +54,10 @@ static bool vdrip9928_reset(VideoDevice *device)
     Vdrip9928Device *impl = vdrip9928_impl(device);
 
     if (impl->tms9918 != NULL) {
-        vrEmuTms9918Destroy(impl->tms9918);
+        vDrip9928Destroy(impl->tms9918);
     }
 
-    impl->tms9918 = vrEmuTms9918New();
+    impl->tms9918 = vDrip9928New();
     if (impl->tms9918 == NULL) {
         fprintf(stderr, "Failed to create vDrip9928 instance\n");
         return false;
@@ -71,14 +71,14 @@ static bool vdrip9928_reset(VideoDevice *device)
 static void vdrip9928_write_control(Vdrip9928Device *impl, uint8_t value)
 {
     ++impl->control_writes;
-    vrEmuTms9918WriteAddr(impl->tms9918, value);
+    vDrip9928WriteAddr(impl->tms9918, value);
     /* printf("  VDP CTRL write value=0x%02X (vDrip9928, count=%zu)\n", value, impl->control_writes); */
 }
 
 static void vdrip9928_write_data(Vdrip9928Device *impl, uint8_t value)
 {
     ++impl->data_writes;
-    vrEmuTms9918WriteData(impl->tms9918, value);
+    vDrip9928WriteData(impl->tms9918, value);
     /* printf("  VDP DATA write value=0x%02X (vDrip9928, count=%zu)\n", value, impl->data_writes); */
 }
 
@@ -132,16 +132,16 @@ static bool vdrip9928_handle_packet(VideoDevice *device, const Packet *packet, V
             for (int y = 0; y < 24 - (int)rows; ++y) {
                 uint16_t src = 0x3800 + (uint16_t)((y + rows) * 80 + x);
                 uint16_t dst = 0x3800 + (uint16_t)(y * 80 + x);
-                uint8_t ch = vrEmuTms9918VramValue(impl->tms9918, src);
-                vrEmuTms9918WriteAddr(impl->tms9918, (uint8_t)(dst & 0xFF));
-                vrEmuTms9918WriteAddr(impl->tms9918, (uint8_t)(((dst >> 8) & 0x3F) | 0x40));
-                vrEmuTms9918WriteData(impl->tms9918, ch);
+                uint8_t ch = vDrip9928VramValue(impl->tms9918, src);
+                vDrip9928WriteAddr(impl->tms9918, (uint8_t)(dst & 0xFF));
+                vDrip9928WriteAddr(impl->tms9918, (uint8_t)(((dst >> 8) & 0x3F) | 0x40));
+                vDrip9928WriteData(impl->tms9918, ch);
             }
             for (int y = 24 - (int)rows; y < 24; ++y) {
                 uint16_t dst = 0x3800 + (uint16_t)(y * 80 + x);
-                vrEmuTms9918WriteAddr(impl->tms9918, (uint8_t)(dst & 0xFF));
-                vrEmuTms9918WriteAddr(impl->tms9918, (uint8_t)(((dst >> 8) & 0x3F) | 0x40));
-                vrEmuTms9918WriteData(impl->tms9918, 0x20);
+                vDrip9928WriteAddr(impl->tms9918, (uint8_t)(dst & 0xFF));
+                vDrip9928WriteAddr(impl->tms9918, (uint8_t)(((dst >> 8) & 0x3F) | 0x40));
+                vDrip9928WriteData(impl->tms9918, 0x20);
             }
         }
         video_device_update_mark_full(device, update);
@@ -172,7 +172,7 @@ static bool vdrip9928_render_framebuffer(VideoDevice *device, uint32_t *framebuf
     }
 
     for (int y = 0; y < render_height; ++y) {
-        vrEmuTms9918ScanLine(impl->tms9918, (uint8_t)y, scanline);
+        vDrip9928ScanLine(impl->tms9918, (uint8_t)y, scanline);
         for (int x = 0; x < render_width; ++x) {
             framebuffer[((size_t)y * (size_t)width) + (size_t)x] = vdrip_color_to_rgb(scanline[x]);
         }
@@ -195,7 +195,7 @@ static bool vdrip9928_is_text_mode(VideoDevice *device)
         return false;
     }
 
-    vrEmuTms9918Mode mode = vrEmuTms9918DisplayMode(impl->tms9918);
+    vDrip9928Mode mode = vDrip9928DisplayMode(impl->tms9918);
     return mode == TMS_MODE_TEXT || mode == TMS_MODE_TEXT_2;
 }
 
@@ -205,7 +205,7 @@ static void vdrip9928_destroy(VideoDevice *device)
 
     if (impl != NULL) {
         if (impl->tms9918 != NULL) {
-            vrEmuTms9918Destroy(impl->tms9918);
+            vDrip9928Destroy(impl->tms9918);
         }
         free(impl);
     }

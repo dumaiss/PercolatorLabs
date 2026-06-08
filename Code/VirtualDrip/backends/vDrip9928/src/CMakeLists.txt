@@ -1,7 +1,7 @@
 
 
-add_library(vdrip_vdp vrEmuTms9918.c)
-add_library(vdrip_vdp_util vrEmuTms9918Util.c)
+add_library(vdrip_vdp vDrip9928.c)
+add_library(vdrip_vdp_util vDrip9928Util.c)
 
 if (WIN32)
   if (BUILD_SHARED_LIBS)

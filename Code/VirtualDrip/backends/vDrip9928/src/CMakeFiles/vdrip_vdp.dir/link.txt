@@ -1,1 +1,0 @@
-/usr/bin/cc -fPIC -shared -Wl,--dependency-file=CMakeFiles/vdrip_vdp.dir/link.d -Wl,-soname,libvdrip_vdp.so -o libvdrip_vdp.so CMakeFiles/vdrip_vdp.dir/vrEmuTms9918.c.o

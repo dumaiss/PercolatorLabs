@@ -1,0 +1,21 @@
+# Out-of-source build trees
+/build/
+build-verify/
+**/build/
+
+# Collected backend libraries
+/externals/
+
+# In-source CMake artifacts (e.g. if a backend is configured in place)
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+
+# Build outputs
+*.o
+*.so
+*.a
+*.dylib
+*.dll

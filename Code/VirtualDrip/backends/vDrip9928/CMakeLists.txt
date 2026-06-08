@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 
-project(vrEmuTms9918)
+project(vDrip9928)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/)
 

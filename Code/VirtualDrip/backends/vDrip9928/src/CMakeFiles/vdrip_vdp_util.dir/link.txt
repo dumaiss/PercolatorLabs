@@ -1,1 +1,0 @@
-/usr/bin/cc -fPIC -shared -Wl,--dependency-file=CMakeFiles/vdrip_vdp_util.dir/link.d -Wl,-soname,libvdrip_vdp_util.so -o libvdrip_vdp_util.so CMakeFiles/vdrip_vdp_util.dir/vrEmuTms9918Util.c.o  -Wl,-rpath,/home/kitamura/Documents/Z80HomeBrew/Code/MODERN/vDrip9928/src libvdrip_vdp.so

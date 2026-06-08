@@ -15,44 +15,38 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
 find_package(LibVNCServer REQUIRED)
 
-set(VIRTUAL_VDP_EXTERNAL_DIR
-    "${CMAKE_CURRENT_SOURCE_DIR}/external"
-    CACHE PATH
-    "Local directory containing external headers and libraries"
+# ----------------------------------------------------------------------------
+# Backends
+#
+# The two backend libraries live under backends/ as self-contained CMake
+# projects. We build them as part of this build via add_subdirectory(), which
+# guarantees they are configured and compiled before virtual-vdp is linked.
+# Their resulting shared libraries are collected into a single externals
+# directory so the virtual-vdp executable can locate them both at link and
+# run time.
+# ----------------------------------------------------------------------------
+set(VIRTUAL_VDP_EXTERNALS_DIR "${CMAKE_BINARY_DIR}/externals"
+    CACHE PATH "Directory where the built backend libraries are collected")
+
+add_subdirectory(backends/vrEmuTms9918)
+add_subdirectory(backends/vDrip9928)
+
+# Route every backend library into the shared externals directory.
+set(VIRTUAL_VDP_BACKEND_TARGETS
+    vrEmuTms9918
+    vrEmuTms9918Util
+    vdrip_vdp
+    vdrip_vdp_util
 )
-set(VIRTUAL_VDP_EXTERNAL_INCLUDE_DIR
-    "${VIRTUAL_VDP_EXTERNAL_DIR}/include"
-    CACHE PATH
-    "Local directory containing external headers"
-)
-set(VIRTUAL_VDP_EXTERNAL_LIBRARY_DIR
-    "${VIRTUAL_VDP_EXTERNAL_DIR}/vrEmuTMS9918/lib"
-    CACHE PATH
-    "Local directory containing external libraries"
-)
-set(VIRTUAL_VDP_EXTERNAL_LIBRARIES
-    ""
-    CACHE STRING
-    "Semicolon-separated external libraries to link, for example: vncserver;z"
-)
-set(VIRTUAL_VDP_VREmuTMS9918_LIBRARY
-    "${VIRTUAL_VDP_EXTERNAL_LIBRARY_DIR}/libvrEmuTms9918.so"
-    CACHE FILEPATH
-    "Path to the vrEmuTms9918 shared library"
+set_target_properties(${VIRTUAL_VDP_BACKEND_TARGETS} PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${VIRTUAL_VDP_EXTERNALS_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${VIRTUAL_VDP_EXTERNALS_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${VIRTUAL_VDP_EXTERNALS_DIR}"
 )
 
-set(VIRTUAL_VDP_VDRIP9928_LIBRARY_DIR
-    "${VIRTUAL_VDP_EXTERNAL_DIR}/vDrip9928/lib"
-    CACHE PATH
-    "Directory containing the vdrip_vdp shared libraries"
-)
-
-set(VIRTUAL_VDP_VDRIP9928_INCLUDE_DIR
-    "${VIRTUAL_VDP_EXTERNAL_DIR}/vDrip9928/include"
-    CACHE PATH
-    "Directory containing the vdrip_vdp header"
-)
-
+# ----------------------------------------------------------------------------
+# Main executable
+# ----------------------------------------------------------------------------
 add_executable(virtual-vdp
     src/app_config.c
     src/app_runtime.c
@@ -76,39 +70,22 @@ add_executable(virtual-vdp
     src/virtual_text_cursor.c
 )
 
-target_include_directories(virtual-vdp
+# Linking the backend targets pulls in their INTERFACE include directories
+# (the headers vrEmuTms9918.h / vdrip_vdp.h) and makes virtual-vdp depend on
+# them, so the libraries are always built first.
+target_link_libraries(virtual-vdp
     PRIVATE
-        "${VIRTUAL_VDP_EXTERNAL_DIR}/vrEmuTMS9918/include"
-        "${VIRTUAL_VDP_VDRIP9928_INCLUDE_DIR}"
+        vrEmuTms9918
+        vrEmuTms9918Util
+        vdrip_vdp
+        vdrip_vdp_util
+        LibVNCServer::LibVNCServer
+        Threads::Threads
 )
 
-target_link_directories(virtual-vdp
-    PRIVATE
-        "${VIRTUAL_VDP_EXTERNAL_LIBRARY_DIR}"
-)
-
-if(EXISTS "${VIRTUAL_VDP_VREmuTMS9918_LIBRARY}")
-    target_link_libraries(virtual-vdp
-        PRIVATE
-            "${VIRTUAL_VDP_VREmuTMS9918_LIBRARY}"
-            "${VIRTUAL_VDP_VDRIP9928_LIBRARY_DIR}/libvdrip_vdp.so"
-            "${VIRTUAL_VDP_VDRIP9928_LIBRARY_DIR}/libvdrip_vdp_util.so"
-            LibVNCServer::LibVNCServer
-            Threads::Threads
-    )
-else()
-    message(FATAL_ERROR "vrEmuTms9918 library not found: ${VIRTUAL_VDP_VREmuTMS9918_LIBRARY}")
-endif()
-
-if(VIRTUAL_VDP_EXTERNAL_LIBRARIES)
-    target_link_libraries(virtual-vdp
-        PRIVATE
-            ${VIRTUAL_VDP_EXTERNAL_LIBRARIES}
-    )
-endif()
-
+# Ensure the executable finds the collected shared libraries at run time.
 set_target_properties(virtual-vdp PROPERTIES
-    BUILD_RPATH "${VIRTUAL_VDP_EXTERNAL_LIBRARY_DIR};${VIRTUAL_VDP_VDRIP9928_LIBRARY_DIR}"
+    BUILD_RPATH "${VIRTUAL_VDP_EXTERNALS_DIR}"
 )
 
 if(MSVC)

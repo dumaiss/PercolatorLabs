@@ -1,198 +1,83 @@
-# vrEmuTms9918 - TMS9918 / TMS9918A / TMS9929A VDP Emulator
+# vDrip9928 — VDP Emulation Backend
 
-<a href="https://github.com/visrealm/vrEmuTms9918/actions/workflows/cmake-multi-platform.yml"><img src="https://github.com/visrealm/vrEmuTms9918/actions/workflows/cmake-multi-platform.yml/badge.svg"/></a>
+vDrip9928 is the TMS9918-family video display processor (VDP) emulation backend
+for the **Virtual Drip** console (the modern-host renderer for the Zephyr-80 /
+Virtual Drip system). The Z80 CP/M host streams VDP register state and VRAM over
+the Virtual Drip serial protocol, and this library renders the frame —
+scanline by scanline — on the host side.
 
-TMS9918 emulator. Core engine written in C99. Zero dependencies.
+It is consumed by the `virtual-vdp` executable via the convenience header
+[`vdrip_vdp.h`](src/vdrip_vdp.h) and the `vdrip_vdp` / `vdrip_vdp_util`
+libraries.
 
-The goal is to emulate all documented modes listed in the [TMS9918A/TMS9928A/TMS9929A datasheet](http://www1.cs.columbia.edu/~sedwards/papers/TMS9918.pdf)
+## Attribution
 
-## Supported Modes
+vDrip9928 is a **permanent, independent fork** of
+[**vrEmuTms9918**](https://github.com/visrealm/vrEmuTms9918) by
+**Troy Schrapel** (Copyright © 2021 Troy Schrapel), used under the MIT License.
+
+This fork is intentionally **not kept in sync with upstream**. Its public API has
+been renamed into its own `vDrip9928` / `VDrip9928` symbol namespace (with
+correspondingly renamed headers) so that it can coexist in the same executable
+as the unmodified upstream `vrEmuTms9918` library without symbol collisions. The
+original MIT copyright and license notices are retained in every source file and
+in [`LICENSE`](LICENSE), as the license requires.
+
+## How this fork diverges from upstream
+
+* **TEXT 2 mode (80-column, 480×192)** — a new display mode (`TMS_MODE_TEXT_2`)
+  with a dedicated scanline renderer (`vDrip9928Text2ScanLine`) and initialiser
+  (`vDrip9928InitialiseText2`). This is the headline feature the Virtual Drip
+  console relies on.
+* **Full-width background pre-fill** — the scanline buffer is pre-filled with the
+  background color so modes that use only part of the 512-pixel width leave clean
+  padding.
+* **`vDrip9928` / `VDrip9928` namespace** — every public function, the exported
+  palette, and the public types carry the fork's namespace; the public headers
+  are `vDrip9928.h` and `vDrip9928Util.h`.
+
+## Supported modes
 
 * Graphics I (including sprites)
 * Graphics II (including sprites)
-* Multicolor mode (including sprites)
+* Multicolor (including sprites)
 * Text
+* **Text 2 (80-column)** *(fork addition)*
 
-## Other features
+Other emulated features inherited from upstream: 5th-sprite handling, sprite
+collisions, VSYNC interrupt, and individual scanline rendering.
 
-* 5th sprite
-* Sprite collisions
-* VSYNC interrupt
-* Individual scanline rendering
+## Usage
 
-## PICO9918
+```c
+#include "vdrip_vdp.h"   /* pulls in vDrip9928.h + vDrip9928Util.h */
 
-This library is also being used in the [PICO9918](https://github.com/visrealm/pico9918) project. A drop-in replacement for a physical TMS9918A powered by a Raspberry Pi Pico.
+VDrip9928 *vdp = vDrip9928New();
+/* feed register/VRAM writes ... */
+uint8_t scanline[TMS9918_PIXELS_X];
+vDrip9928ScanLine(vdp, y, scanline);
+/* ... */
+vDrip9928Destroy(vdp);
+```
 
-<img src="https://github.com/visrealm/pico9918/raw/main/img/pico9918_v1_0_sm.png" width="640px">
-
-The PICO9918 running in an original TI-99/4A:
-
-### Don't mess with Texas!
-[![PICO9918 Prototype - Don't mess with Texas](https://img.visualrealmsoftware.com/youtube/thumb/ljNRFKbOGJs)](https://youtu.be/ljNRFKbOGJs)
-
-See [github.com/visrealm/pico9918](https://github.com/visrealm/pico9918)
-
-## Demos:
-
-#### Graphics Mode I Demo
-<img src="res/mode1demo.gif" alt="Graphics Mode I Demo" width="1279px">
-
-#### Graphics Mode II Demo
-<img src="res/mode2demo.gif" alt="Graphics Mode II Demo" width="1279px">
-
-#### Text Mode Demo
-<img src="res/textdemo.gif" alt="Text Mode Demo" width="1279px">
-
-#### Multicolor Mode Demo
-<img src="res/mcdemo.gif" alt="Multicolor Mode Demo" width="1279px">
+Link against `vdrip_vdp` (core) and, if you use the helper/initialiser
+functions, `vdrip_vdp_util`.
 
 ## Building
 
-vrEmuTms9918 uses the CMake build system
+This backend is built automatically as part of the Virtual Drip build — the
+top-level `CMakeLists.txt` pulls it in with `add_subdirectory(backends/vDrip9928)`
+and collects the resulting shared libraries into the build's `externals/`
+directory, where the `virtual-vdp` executable locates them at link and run time.
 
-#### Checkout repository
+To build it stand-alone:
 
+```sh
+cmake -S backends/vDrip9928 -B backends/vDrip9928/build
+cmake --build backends/vDrip9928/build
 ```
-git clone https://github.com/visrealm/vrEmuTms9918.git
-cd vrEmuTms9918
-```
-
-#### Setup build
-
-```
-mkdir build
-cd build
-cmake ..
-```
-
-#### Build
-
-```
-cmake --build .
-```
-Windows: Optionally, open the generated solution file
-
-#### Run tests
-```
-ctest
-```
-Windows: Optionally, build the ALL_TESTS project in the generated solution file
-
-## Quick start
-
-```c
-#include "vrEmuTms9918.h"
-#include "vrEmuTms9918Util.h"
-
-#define TMS_VRAM_NAME_ADDRESS          0x3800
-#define TMS_VRAM_COLOR_ADDRESS         0x0000
-#define TMS_VRAM_PATT_ADDRESS          0x2000
-#define TMS_VRAM_SPRITE_ATTR_ADDRESS   0x3B00
-#define TMS_VRAM_SPRITE_PATT_ADDRESS   0x1800
-
-// program entry point
-int main()
-{
-  // create a new tms9918
-  VrEmuTms9918 *tms9918 = vrEmuTms9918New();
-  
-  // Here, we're using the helper functions provided by vrEmuTms9918Util.h
-  //
-  // In a full system emulator, the only functions required (connected to the system bus) would be:
-  //
-  //  * vrEmuTms9918WriteAddr()
-  //  * vrEmuTms9918WriteData()
-  //  * vrEmuTms9918ReadStatus()
-  //  * vrEmuTms9918ReadData()
-  //
-  // The helper functions below wrap the above functions and are not required.
-  // vrEmuTms9918Util.h/c can be omitted if you're not using them.
-  //
-  // For a full example, see https://github.com/visrealm/hbc-56/blob/master/emulator/src/devices/tms9918_device.c
-  
-  // set up the VDP write-only registers
-  vrEmuTms9918WriteRegisterValue(tms9918, TMS_REG_0, TMS_R0_MODE_GRAPHICS_I);
-  vrEmuTms9918WriteRegisterValue(tms9918, TMS_REG_1, TMS_R1_MODE_GRAPHICS_I | TMS_R1_RAM_16K);
-  vrEmuTms9918SetNameTableAddr(tms9918, TMS_VRAM_NAME_ADDRESS);
-  vrEmuTms9918SetColorTableAddr(tms9918, TMS_VRAM_COLOR_ADDRESS);
-  vrEmuTms9918SetPatternTableAddr(tms9918, TMS_VRAM_PATT_ADDRESS);
-  vrEmuTms9918SetSpriteAttrTableAddr(tms9918, TMS_VRAM_SPRITE_ATTR_ADDRESS);
-  vrEmuTms9918SetSpritePattTableAddr(tms9918, TMS_VRAM_SPRITE_PATT_ADDRESS);
-  vrEmuTms9918SetFgBgColor(tms9918, TMS_BLACK, TMS_CYAN);
-  
-  // send it some data (a pattern)
-  vrEmuTms9918SetAddressWrite(tms9918, TMS_VRAM_PATT_ADDRESS);
-
-  // update pattern #0
-  char smile[] = {0b00111100,
-                  0b01000010,
-                  0b10000001,
-                  0b10100101,
-                  0b10000001,
-                  0b10011001,
-                  0b01000010,
-                  0b00111100};
-  vrEmuTms9918WriteBytes(tms9918, smile, sizeof(smile));
-  
-  // update fg/bg color for first 8 characters
-  vrEmuTms9918SetAddressWrite(tms9918, TMS_VRAM_COLOR_ADDRESS)
-  vrEmuTms9918WriteData(tms9918, vrEmuTms9918FgBgColor(TMS_BLACK, TMS_LT_YELLOW));
- 
-  // output smile pattern to screen
-  vrEmuTms9918SetAddressWrite(tms9918, TMS_VRAM_NAME_ADDRESS);
-
-  // a few smiles
-  vrEmuTms9918WriteData(tms9918, 0x00);
-  vrEmuTms9918WriteData(tms9918, 0x00);
-  vrEmuTms9918WriteData(tms9918, 0x00);
-  
-  // render the display
-  char scanline[TMS9918A_PIXELS_X]; // scanline buffer
-
-  // an example output (a framebuffer for an SDL texture)
-  uint32_t frameBuffer[TMS9918A_PIXELS_X * TMS9918A_PIXELS_Y];
-
-  // generate all scanlines and render to framebuffer
-  uint32_t *pixPtr = frameBuffer;
-  for (int y = 0; y < TMS9918A_PIXELS_Y; ++y)
-  {
-    // get the scanline pixels
-    vrEmuTms9918ScanLine(tms9918, y, scanline);
-    
-    for (int x = 0; x < TMS9918A_PIXELS_X; ++x)
-    {
-      // values returned from vrEmuTms9918ScanLine() are palette indexes
-      // use the vrEmuTms9918Palette array to convert to an RGBA value      
-      *pixPtr++ = vrEmuTms9918Palette[scanline[x]];
-    }    
-  }
-  
-  // output the buffer...
-  
-  ...
-  
-  
-  // clean up
-  
-  vrEmuTms9918Destroy(tms9918);
-  tms9918 = NULL;
-  
-  return 0;
-}
-```
-
-## Real example
-
-This library is used in the [HBC-56](https://github.com/visrealm/hbc-56) emulator.
-
-The HBC-56 uses this library to support:
-
-* Rendering to an SDL texture.
-* TMS9918 VSYNC Interrupts.
-* Time-based rendering. Supports beam-time.
-
-Full source: [hbc-56/emulator/src/devices/tms9918_device.c](https://github.com/visrealm/hbc-56/blob/master/emulator/src/devices/tms9918_device.c)
 
 ## License
-This code is licensed under the [MIT](https://opensource.org/licenses/MIT "MIT") license
+
+MIT — see [LICENSE](LICENSE). Original work Copyright © 2021 Troy Schrapel
+(vrEmuTms9918); fork modifications for the Virtual Drip console.
