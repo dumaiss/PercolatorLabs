@@ -2358,7 +2358,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "R11")
 					(unit 1)
@@ -2442,7 +2442,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "#PWR060")
 					(unit 1)
@@ -2541,7 +2541,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "C20")
 					(unit 1)
@@ -2639,7 +2639,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "R10")
 					(unit 1)
@@ -2737,7 +2737,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "R9")
 					(unit 1)
@@ -2836,7 +2836,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "C21")
 					(unit 1)
@@ -2943,7 +2943,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "SW1")
 					(unit 1)
@@ -3027,7 +3027,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "#PWR047")
 					(unit 1)
@@ -3125,7 +3125,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "R12")
 					(unit 1)
@@ -3224,7 +3224,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "C18")
 					(unit 1)
@@ -3323,7 +3323,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "C19")
 					(unit 1)
@@ -3422,7 +3422,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "C22")
 					(unit 1)
@@ -3506,7 +3506,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "#PWR051")
 					(unit 1)
@@ -3590,7 +3590,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "#PWR055")
 					(unit 1)
@@ -3674,7 +3674,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "#PWR061")
 					(unit 1)
@@ -3758,7 +3758,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "#PWR059")
 					(unit 1)
@@ -3920,7 +3920,7 @@
 					(unit 1)
 				)
 			)
-			(project "Zephyr-80-Video"
+			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592/879620fc-7cd1-491d-84d9-b4b5f40b1973"
 					(reference "U11")
 					(unit 1)

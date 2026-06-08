@@ -256,7 +256,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "Zephyr-80-Video.kicad_pro",
+    "filename": "MorningJoe.kicad_pro",
     "version": 3
   },
   "net_settings": {
@@ -411,8 +411,8 @@
     "subpart_id_separator": 0,
     "top_level_sheets": [
       {
-        "filename": "Zephyr-80-Video.kicad_sch",
-        "name": "Zephyr-80-Video",
+        "filename": "MorningJoe.kicad_sch",
+        "name": "MorningJoe",
         "uuid": "e7f44da3-512d-42ef-9079-a376a3e5a592"
       }
     ],
@@ -422,7 +422,7 @@
   "sheets": [
     [
       "e7f44da3-512d-42ef-9079-a376a3e5a592",
-      "Zephyr-80-Video"
+      "MorningJoe"
     ],
     [
       "5c85cc06-22f1-41fa-b58c-ecfd1a660545",
