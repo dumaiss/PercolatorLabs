@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/kitamura/Documents/Z80HomeBrew/Code/MODERN/vDrip9928/cmake_install.cmake",
-		"/home/kitamura/Documents/Z80HomeBrew/Code/MODERN/vDrip9928/src/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
