@@ -7,16 +7,6 @@
 	(lib_symbols)
 	(wire
 		(pts
-			(xy 81.28 95.25) (xy 81.28 107.95)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1b617c63-af61-47fb-b0f5-2843b1345547")
-	)
-	(wire
-		(pts
 			(xy 104.14 88.9) (xy 109.22 88.9)
 		)
 		(stroke
@@ -37,7 +27,7 @@
 	)
 	(wire
 		(pts
-			(xy 92.71 102.87) (xy 104.14 102.87)
+			(xy 93.98 102.87) (xy 104.14 102.87)
 		)
 		(stroke
 			(width 0)
@@ -47,7 +37,7 @@
 	)
 	(wire
 		(pts
-			(xy 87.63 107.95) (xy 87.63 100.33)
+			(xy 88.9 107.95) (xy 88.9 100.33)
 		)
 		(stroke
 			(width 0)
@@ -77,7 +67,7 @@
 	)
 	(wire
 		(pts
-			(xy 90.17 101.6) (xy 102.87 101.6)
+			(xy 91.44 101.6) (xy 102.87 101.6)
 		)
 		(stroke
 			(width 0)
@@ -145,6 +135,16 @@
 		)
 		(uuid "96a19c50-b9a3-462d-95f4-1f09d1ca3bdc")
 	)
+	(bus
+		(pts
+			(xy 81.28 95.25) (xy 81.28 107.95)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9950cb16-1c8b-4907-abd6-ecf77d1b9236")
+	)
 	(wire
 		(pts
 			(xy 67.31 95.25) (xy 67.31 107.95)
@@ -167,7 +167,7 @@
 	)
 	(wire
 		(pts
-			(xy 87.63 100.33) (xy 101.6 100.33)
+			(xy 88.9 100.33) (xy 101.6 100.33)
 		)
 		(stroke
 			(width 0)
@@ -177,7 +177,7 @@
 	)
 	(wire
 		(pts
-			(xy 90.17 107.95) (xy 90.17 101.6)
+			(xy 91.44 107.95) (xy 91.44 101.6)
 		)
 		(stroke
 			(width 0)
@@ -207,7 +207,7 @@
 	)
 	(wire
 		(pts
-			(xy 85.09 99.06) (xy 100.33 99.06)
+			(xy 86.36 99.06) (xy 100.33 99.06)
 		)
 		(stroke
 			(width 0)
@@ -227,7 +227,17 @@
 	)
 	(wire
 		(pts
-			(xy 85.09 107.95) (xy 85.09 99.06)
+			(xy 83.82 95.25) (xy 83.82 107.95)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e01c09a2-59f9-4a5e-94d0-9f33b10fb1d8")
+	)
+	(wire
+		(pts
+			(xy 86.36 107.95) (xy 86.36 99.06)
 		)
 		(stroke
 			(width 0)
@@ -237,7 +247,7 @@
 	)
 	(wire
 		(pts
-			(xy 92.71 107.95) (xy 92.71 102.87)
+			(xy 93.98 107.95) (xy 93.98 102.87)
 		)
 		(stroke
 			(width 0)
@@ -383,6 +393,16 @@
 				(justify left)
 			)
 		)
+		(pin "D0" bidirectional
+			(at 83.82 95.25 270)
+			(uuid "22bf76d4-598a-4401-b212-89245d8c2603")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
 		(instances
 			(project "MorningJoe"
 				(path "/e7f44da3-512d-42ef-9079-a376a3e5a592"
@@ -430,7 +450,7 @@
 			)
 		)
 		(pin "CS0" output
-			(at 85.09 107.95 90)
+			(at 86.36 107.95 90)
 			(uuid "697e1ee1-b1f2-4574-900d-228b293292ab")
 			(effects
 				(font
@@ -470,7 +490,7 @@
 			)
 		)
 		(pin "CS1" output
-			(at 87.63 107.95 90)
+			(at 88.9 107.95 90)
 			(uuid "9b562692-366a-4b66-85ac-cdf64e13660f")
 			(effects
 				(font
@@ -520,7 +540,7 @@
 			)
 		)
 		(pin "CS3" output
-			(at 92.71 107.95 90)
+			(at 93.98 107.95 90)
 			(uuid "8bef3a14-a6df-480f-8a94-712eba0df3e3")
 			(effects
 				(font
@@ -530,7 +550,7 @@
 			)
 		)
 		(pin "CS2" output
-			(at 90.17 107.95 90)
+			(at 91.44 107.95 90)
 			(uuid "e270e9b8-eb1f-4d9d-8cf2-e62bcb1af7c3")
 			(effects
 				(font
@@ -542,6 +562,16 @@
 		(pin "~{WR}" output
 			(at 67.31 107.95 90)
 			(uuid "88589538-4890-42f1-ba02-e8e6e49fd4e2")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "D0" bidirectional
+			(at 83.82 107.95 90)
+			(uuid "b92bd4e7-bc9e-4927-a184-790bc806b89d")
 			(effects
 				(font
 					(size 1.27 1.27)

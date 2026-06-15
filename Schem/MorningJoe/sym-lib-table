@@ -39,4 +39,5 @@
 	(lib (name "Z80CTC") (type "KiCad") (uri "${PBITZ_ROOT}/99-KiCad-Lib/Symbols/Z80CTC.kicad_sym") (options "") (descr ""))
 	(lib (name "Z80HomeBrew") (type "KiCad") (uri "${PBITZ_ROOT}/99-KiCad-Lib/Symbols/Z80HomeBrew.kicad_sym") (options "") (descr ""))
 	(lib (name "Z80SIO") (type "KiCad") (uri "${PBITZ_ROOT}/99-KiCad-Lib/Symbols/Z80SIO.kicad_sym") (options "") (descr ""))
+	(lib (name "2026-06-14_23-32-30") (type "KiCad") (uri "${PERCOLATEDLABS_ROOT}/99-KiCad-Lib/Symbols/2026-06-14_23-32-30.kicad_sym") (options "") (descr ""))
 )

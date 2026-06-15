@@ -2290,7 +2290,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4k7"
+		(property "Value" "4K7"
 			(at 98.806 78.74 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2571,7 +2571,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4k7"
+		(property "Value" "4K7"
 			(at 92.456 78.74 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2669,7 +2669,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4k7"
+		(property "Value" "4K7"
 			(at 86.106 78.74 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2910,7 +2910,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "SH-7070TB"
+		(property "MANUFACTURER_PART_NUMBER" "SH-7070MC"
 			(at 58.42 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -3057,7 +3057,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4k7"
+		(property "Value" "4K7"
 			(at 103.886 78.74 0)
 			(show_name no)
 			(do_not_autoplace no)

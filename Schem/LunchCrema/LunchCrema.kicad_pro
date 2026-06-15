@@ -88,6 +88,10 @@
         [
           "courtyards_overlap|329033000|165099800|88d145cc-5bbe-4770-b436-d600e026762f|d5e45f16-0fbc-49d9-88e7-99dd9592e69f",
           "By design, under the chip"
+        ],
+        [
+          "extra_footprint|407876400|159576400|e610b27e-9a98-460a-b1eb-19f735edc9fb|00000000-0000-0000-0000-000000000000",
+          ""
         ]
       ],
       "meta": {
@@ -778,7 +782,7 @@
         "uuid": "cd23574f-7a7d-4a14-add5-f302c6d915cb"
       }
     ],
-    "used_designators": "",
+    "used_designators": "U9",
     "variants": []
   },
   "sheets": [
