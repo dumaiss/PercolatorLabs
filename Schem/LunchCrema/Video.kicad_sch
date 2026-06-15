@@ -5465,12 +5465,6 @@
 		(uuid "71253eb8-6468-462a-803c-a85a1bef8661")
 	)
 	(junction
-		(at 242.57 238.76)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "7d7fcf4c-92df-4f79-8119-3a5fa61ba474")
-	)
-	(junction
 		(at 382.27 252.73)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5493,6 +5487,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "89b92abd-06e1-46bd-ac1e-3e98ecafb036")
+	)
+	(junction
+		(at 242.57 241.3)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "90a6785a-dd99-4623-99d8-523def0a804d")
 	)
 	(junction
 		(at 73.66 213.36)
@@ -5709,10 +5709,6 @@
 	(no_connect
 		(at 400.05 265.43)
 		(uuid "4d9f0538-4d7e-4e91-ae88-5b1c745a22f1")
-	)
-	(no_connect
-		(at 248.92 236.22)
-		(uuid "50a9fce2-07d2-4260-b5af-76ca4ff8425c")
 	)
 	(no_connect
 		(at 101.6 215.9)
@@ -6475,6 +6471,16 @@
 			(type default)
 		)
 		(uuid "0297ad15-a90a-4c16-a89d-fd1b20cb3db0")
+	)
+	(wire
+		(pts
+			(xy 236.22 236.22) (xy 236.22 229.87)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "046cc856-2ed5-4c76-aace-bd304ffeff9b")
 	)
 	(wire
 		(pts
@@ -7294,6 +7300,16 @@
 	)
 	(wire
 		(pts
+			(xy 242.57 241.3) (xy 242.57 238.76)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4c081dd1-2e34-49f9-b542-6ec13d2d579f")
+	)
+	(wire
+		(pts
 			(xy 336.55 254) (xy 342.9 254)
 		)
 		(stroke
@@ -7567,16 +7583,6 @@
 	)
 	(wire
 		(pts
-			(xy 255.27 181.61) (xy 257.81 181.61)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "60a53ef7-ab51-4e20-8e7f-ecec855aac36")
-	)
-	(wire
-		(pts
 			(xy 288.29 110.49) (xy 294.64 110.49)
 		)
 		(stroke
@@ -7786,16 +7792,6 @@
 			(type default)
 		)
 		(uuid "708e2855-3674-45ef-9ab3-7c92bb250965")
-	)
-	(wire
-		(pts
-			(xy 242.57 181.61) (xy 242.57 238.76)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "731076e5-dafd-4cac-a7d2-3ff5e63396f5")
 	)
 	(bus
 		(pts
@@ -8474,6 +8470,16 @@
 			(type default)
 		)
 		(uuid "a24e9911-f325-42d3-8d76-162845ab0b23")
+	)
+	(wire
+		(pts
+			(xy 228.6 219.71) (xy 228.6 241.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a5590dce-ceda-4d21-bf39-d3807cae45a7")
 	)
 	(wire
 		(pts
@@ -9161,26 +9167,6 @@
 	)
 	(wire
 		(pts
-			(xy 257.81 175.26) (xy 257.81 181.61)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ce991a39-5ec0-4a5b-927e-94eb5a793dc5")
-	)
-	(wire
-		(pts
-			(xy 242.57 181.61) (xy 247.65 181.61)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "cf032678-d2bf-44d5-9757-e89c91195eca")
-	)
-	(wire
-		(pts
 			(xy 303.53 196.85) (xy 303.53 209.55)
 		)
 		(stroke
@@ -9229,6 +9215,16 @@
 			(type default)
 		)
 		(uuid "d138ad86-4234-4da9-bbaf-ad22aa4107d6")
+	)
+	(wire
+		(pts
+			(xy 236.22 219.71) (xy 236.22 222.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d33f3fa0-2e68-4af5-aca2-9186ea34dc40")
 	)
 	(wire
 		(pts
@@ -9299,6 +9295,16 @@
 			(type default)
 		)
 		(uuid "d48f8349-5fed-4759-aeda-1ba80b04b454")
+	)
+	(wire
+		(pts
+			(xy 248.92 236.22) (xy 236.22 236.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d4cff6c7-b51e-4241-931e-a2b56d0ded6e")
 	)
 	(wire
 		(pts
@@ -9453,16 +9459,6 @@
 	)
 	(wire
 		(pts
-			(xy 242.57 241.3) (xy 242.57 238.76)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e2a5dd67-1eec-4bfb-a1d2-6bc3beab30f0")
-	)
-	(wire
-		(pts
 			(xy 73.66 220.98) (xy 76.2 220.98)
 		)
 		(stroke
@@ -9561,6 +9557,16 @@
 			(type default)
 		)
 		(uuid "e64ad182-494f-43b0-b5d4-9b0054cff8c6")
+	)
+	(wire
+		(pts
+			(xy 228.6 241.3) (xy 242.57 241.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e6e3a701-b05b-4596-ae82-f436046fc126")
 	)
 	(wire
 		(pts
@@ -13033,97 +13039,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 251.46 181.61 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "29d9b2eb-ad16-4c14-a30d-12c4ffc5228b")
-		(property "Reference" "R6"
-			(at 251.46 175.26 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "4k7"
-			(at 251.46 177.8 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 251.46 183.388 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 251.46 181.61 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 251.46 181.61 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" "CRCW06034K70FKEA"
-			(at 251.46 181.61 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "de074494-e73d-48ae-8b34-b97dd0d0bff0")
-		)
-		(pin "2"
-			(uuid "dac34c9b-6f77-4e0c-bede-e0af4d9b48b0")
-		)
-		(instances
-			(project "LunchCrema"
-				(path "/cd23574f-7a7d-4a14-add5-f302c6d915cb/2c30826b-ba26-488b-8dcd-4571fddacffc"
-					(reference "R6")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "V9958:41464")
 		(at 279.4 102.87 0)
 		(unit 1)
@@ -14539,10 +14454,10 @@
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "3d5d6a34-e49c-4dc2-b870-57ca3b56119c")
 		(property "Reference" "R7"
 			(at 291.084 208.534 90)
@@ -15844,10 +15759,10 @@
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "75872581-cd45-429b-8898-38d1dbc9fb01")
 		(property "Reference" "Y2"
 			(at 211.328 316.738 0)
@@ -15929,6 +15844,177 @@
 			(project "LunchCrema"
 				(path "/cd23574f-7a7d-4a14-add5-f302c6d915cb/2c30826b-ba26-488b-8dcd-4571fddacffc"
 					(reference "Y2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 236.22 219.71 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "76822359-3949-4ddd-a42f-e6f127358418")
+		(property "Reference" "#PWR035"
+			(at 236.22 223.52 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 236.22 214.63 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 236.22 219.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 236.22 219.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 236.22 219.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3fd8773a-4a04-4380-b86c-afad90257feb")
+		)
+		(instances
+			(project "LunchCrema"
+				(path "/cd23574f-7a7d-4a14-add5-f302c6d915cb/2c30826b-ba26-488b-8dcd-4571fddacffc"
+					(reference "#PWR035")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 236.22 226.06 180)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "76c253ef-1a0e-424e-b5a1-5809ea476a93")
+		(property "Reference" "R20"
+			(at 238.76 224.7899 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "4k7"
+			(at 238.76 227.3299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 237.998 226.06 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 236.22 226.06 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 236.22 226.06 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CRCW06034K70FKEA"
+			(at 236.22 226.06 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ca1f5b25-5a93-4e14-bc4c-8a9e9a0c3c76")
+		)
+		(pin "2"
+			(uuid "73fe17da-e3e8-4169-b060-cf1e45341de5")
+		)
+		(instances
+			(project "LunchCrema"
+				(path "/cd23574f-7a7d-4a14-add5-f302c6d915cb/2c30826b-ba26-488b-8dcd-4571fddacffc"
+					(reference "R20")
 					(unit 1)
 				)
 			)
@@ -16574,7 +16660,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 257.81 175.26 0)
+		(at 228.6 219.71 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -16585,7 +16671,7 @@
 		(fields_autoplaced yes)
 		(uuid "89822b16-48cf-4e7d-9e36-6f3358ff9a01")
 		(property "Reference" "#PWR015"
-			(at 257.81 179.07 0)
+			(at 228.6 223.52 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16596,7 +16682,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 257.81 170.18 0)
+			(at 228.6 214.63 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -16606,7 +16692,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 257.81 175.26 0)
+			(at 228.6 219.71 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16617,7 +16703,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 257.81 175.26 0)
+			(at 228.6 219.71 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16628,7 +16714,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 257.81 175.26 0)
+			(at 228.6 219.71 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
