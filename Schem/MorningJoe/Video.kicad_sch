@@ -15827,7 +15827,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm"
 			(at 171.1452 254 0)
 			(hide yes)
 			(show_name no)
@@ -15882,7 +15882,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "25YXJ220M6.3X11"
+		(property "MANUFACTURER_PART_NUMBER" "EEA-GA1E100H"
 			(at 170.18 250.19 90)
 			(hide yes)
 			(show_name no)
