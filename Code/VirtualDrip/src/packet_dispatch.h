@@ -42,6 +42,8 @@ typedef struct {
     bool log_packets;
     VirtualTextCursor cursor;
     size_t packet_count;
+    StreamState stream_state;
+    UploadState upload_state;
 } PacketDispatch;
 
 /** Initialize dispatch with a backend and host-owned framebuffer. */

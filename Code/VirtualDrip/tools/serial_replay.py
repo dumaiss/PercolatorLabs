@@ -118,14 +118,14 @@ def parse_packets(path: Path) -> list[Packet]:
                 f"expected 0x{SYNC1:02X}, got 0x{data[offset + 1]:02X}"
             )
 
-        wire_length = data[offset + 2]
-        if wire_length < 3:
+        declared_length = data[offset + 2] | (data[offset + 3] << 8)
+        if declared_length < 1:
             raise ReplayError(
-                f"invalid LEN at offset {packet_offset + 2}: "
-                f"expected at least 3, got {wire_length}"
+                f"invalid declared length at offset {packet_offset + 2}: "
+                f"expected at least 1, got {declared_length}"
             )
 
-        total_length = 2 + wire_length
+        total_length = 4 + declared_length  # SYNC(2) + LEN(2) + TYPE + PAYLOAD
         if len(data) - offset < total_length:
             raise ReplayError(
                 f"truncated packet at offset {packet_offset}: "
@@ -133,12 +133,13 @@ def parse_packets(path: Path) -> list[Packet]:
             )
 
         packet_data = data[offset : offset + total_length]
+        payload_length = declared_length - 1
         packets.append(
             Packet(
                 index=len(packets) + 1,
                 offset=packet_offset,
-                packet_type=packet_data[3],
-                payload_length=wire_length - 3,
+                packet_type=packet_data[4],
+                payload_length=payload_length,
                 data=packet_data,
             )
         )

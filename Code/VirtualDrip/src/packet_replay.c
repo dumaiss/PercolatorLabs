@@ -42,5 +42,5 @@ int packet_replay_file(const char *path, PacketHandler handler, void *userdata)
         return -1;
     }
 
-    return packet_parser_crc_errors(&parser) == 0 ? 0 : 1;
+    return 0;
 }

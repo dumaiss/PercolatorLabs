@@ -49,7 +49,7 @@ static Vdrip9928Device *vdrip9928_impl(VideoDevice *device)
     return (Vdrip9928Device *)device->impl;
 }
 
-static bool vdrip9928_reset(VideoDevice *device)
+static bool vdrip9928_reset(VideoDevice *device, VideoDeviceResult *result)
 {
     Vdrip9928Device *impl = vdrip9928_impl(device);
 
@@ -65,6 +65,8 @@ static bool vdrip9928_reset(VideoDevice *device)
 
     impl->control_writes = 0;
     impl->data_writes = 0;
+    result->accepted = true;
+    result->framebuffer_dirty = true;
     return true;
 }
 
@@ -82,7 +84,7 @@ static void vdrip9928_write_data(Vdrip9928Device *impl, uint8_t value)
     /* printf("  VDP DATA write value=0x%02X (vDrip9928, count=%zu)\n", value, impl->data_writes); */
 }
 
-static bool vdrip9928_handle_packet(VideoDevice *device, const Packet *packet, VideoDeviceUpdate *update)
+static bool vdrip9928_handle_packet(VideoDevice *device, const Packet *packet, VideoDeviceResult *result)
 {
     Vdrip9928Device *impl = vdrip9928_impl(device);
 
@@ -93,7 +95,7 @@ static bool vdrip9928_handle_packet(VideoDevice *device, const Packet *packet, V
             return false;
         }
         vdrip9928_write_control(impl, packet->payload[0]);
-        video_device_update_mark_full(device, update);
+        video_device_result_mark_full(device, result);
         return true;
     case PACKET_VDP_DATA_WRITE:
         if (packet->length != 1) {
@@ -101,7 +103,7 @@ static bool vdrip9928_handle_packet(VideoDevice *device, const Packet *packet, V
             return false;
         }
         vdrip9928_write_data(impl, packet->payload[0]);
-        video_device_update_mark_full(device, update);
+        video_device_result_mark_full(device, result);
         return true;
     case PACKET_VDP_DATA_BLOCK:
         if (packet->length == 0 || packet->length > MAX_PACKET_PAYLOAD) {
@@ -144,15 +146,15 @@ static bool vdrip9928_handle_packet(VideoDevice *device, const Packet *packet, V
                 vDrip9928WriteData(impl->tms9918, 0x20);
             }
         }
-        video_device_update_mark_full(device, update);
+        video_device_result_mark_full(device, result);
         return true;
     }
     case PACKET_RESET:
-        if (!vdrip9928_reset(device)) {
+        if (!vdrip9928_reset(device, result)) {
             return false;
         }
         /* printf("  VDP reset (%s)\n", device->info.name); */
-        video_device_update_mark_full(device, update);
+        video_device_result_mark_full(device, result);
         return true;
     default:
         /* printf("  VDP no-op for %s\n", packet_type_name(packet->type)); */
@@ -181,10 +183,10 @@ static bool vdrip9928_render_framebuffer(VideoDevice *device, uint32_t *framebuf
     return true;
 }
 
-static void vdrip9928_tick_frame(VideoDevice *device, VideoDeviceUpdate *update)
+static void vdrip9928_tick_frame(VideoDevice *device, VideoDeviceResult *result)
 {
     (void)device;
-    video_device_update_clear(update);
+    (void)result;
 }
 
 static bool vdrip9928_is_text_mode(VideoDevice *device)
@@ -216,6 +218,7 @@ static void vdrip9928_destroy(VideoDevice *device)
 static const VideoDeviceOps vdrip9928_ops = {
     .reset = vdrip9928_reset,
     .handle_packet = vdrip9928_handle_packet,
+    .frame_mark = NULL,
     .render_framebuffer = vdrip9928_render_framebuffer,
     .tick_frame = vdrip9928_tick_frame,
     .is_text_mode = vdrip9928_is_text_mode,
@@ -244,8 +247,12 @@ VideoDevice *video_device_vdrip9928_create(void)
     device->info.height = TMS9918_PIXELS_Y;
     device->info.supports_status_read = false;
     device->info.supports_data_read = false;
+    device->info.supports_palette_port = false;
+    device->info.supports_indirect_port = false;
+    device->info.allows_proxy_cursor_overlay = true;
 
-    if (!video_device_reset(device)) {
+    VideoDeviceResult result;
+    if (!video_device_reset(device, &result)) {
         video_device_destroy(device);
         return NULL;
     }

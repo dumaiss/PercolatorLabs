@@ -31,35 +31,53 @@ typedef struct {
     int height;
     bool supports_status_read;
     bool supports_data_read;
+    bool supports_palette_port;
+    bool supports_indirect_port;
+    bool allows_proxy_cursor_overlay;
 } VideoDeviceInfo;
+
+/**
+ * Kind of reply a video operation may produce.
+ */
+typedef enum {
+    VIDEO_REPLY_NONE,
+    VIDEO_REPLY_STATUS_BYTE,
+    VIDEO_REPLY_DATA_BYTE,
+    VIDEO_REPLY_PROTOCOL_ERROR
+} VideoReplyKind;
 
 /**
  * Result of a backend operation.
  *
- * If framebuffer_dirty is true, the core should call render_framebuffer() and
- * then report the dirty rectangle to the display backend. Current backends may
- * conservatively mark the full screen dirty.
+ * Carries both dirty-rectangle and optional reply semantics. The dispatch
+ * layer uses reply_kind to decide whether to send a serial reply.
  */
 typedef struct {
+    bool accepted;
     bool framebuffer_dirty;
+    bool presentation_requested;
     int dirty_x;
     int dirty_y;
     int dirty_w;
     int dirty_h;
-} VideoDeviceUpdate;
+    VideoReplyKind reply_kind;
+    uint8_t reply_value;
+} VideoDeviceResult;
 
 /**
  * Backend vtable.
  *
  * reset, handle_packet, render_framebuffer, and destroy are expected for normal
  * devices. tick_frame is optional for devices that need frame-time progression.
+ * frame_mark is optional; missing implementations default to presentation-only.
  * Missing operations are treated as no-ops or failures by wrapper functions.
  */
 typedef struct {
-    bool (*reset)(VideoDevice *device);
-    bool (*handle_packet)(VideoDevice *device, const Packet *packet, VideoDeviceUpdate *update);
+    bool (*reset)(VideoDevice *device, VideoDeviceResult *result);
+    bool (*handle_packet)(VideoDevice *device, const Packet *packet, VideoDeviceResult *result);
+    bool (*frame_mark)(VideoDevice *device, VideoDeviceResult *result);
     bool (*render_framebuffer)(VideoDevice *device, uint32_t *framebuffer, int width, int height);
-    void (*tick_frame)(VideoDevice *device, VideoDeviceUpdate *update);
+    void (*tick_frame)(VideoDevice *device, VideoDeviceResult *result);
     bool (*is_text_mode)(VideoDevice *device);
     void (*destroy)(VideoDevice *device);
 } VideoDeviceOps;
@@ -77,17 +95,20 @@ struct VideoDevice {
     VideoDeviceInfo info;
 };
 
-/** Clear an update structure to "no framebuffer changes". */
-void video_device_update_clear(VideoDeviceUpdate *update);
+/** Clear a result structure to defaults. */
+void video_device_result_clear(VideoDeviceResult *result);
 
-/** Mark the whole backend framebuffer as dirty. */
-void video_device_update_mark_full(VideoDevice *device, VideoDeviceUpdate *update);
+/** Mark the whole backend framebuffer as dirty in the result. */
+void video_device_result_mark_full(VideoDevice *device, VideoDeviceResult *result);
 
 /** Reset backend state to power-on/default state. */
-bool video_device_reset(VideoDevice *device);
+bool video_device_reset(VideoDevice *device, VideoDeviceResult *result);
 
 /** Dispatch one protocol packet to the backend. */
-bool video_device_handle_packet(VideoDevice *device, const Packet *packet, VideoDeviceUpdate *update);
+bool video_device_handle_packet(VideoDevice *device, const Packet *packet, VideoDeviceResult *result);
+
+/** Handle FRAME_MARK: present and reset retained state. */
+bool video_device_frame_mark(VideoDevice *device, VideoDeviceResult *result);
 
 /**
  * Render current backend state into a caller-owned framebuffer.
@@ -98,7 +119,7 @@ bool video_device_handle_packet(VideoDevice *device, const Packet *packet, Video
 bool video_device_render_framebuffer(VideoDevice *device, uint32_t *framebuffer, int width, int height);
 
 /** Advance one frame for backends that need time-based updates. */
-void video_device_tick_frame(VideoDevice *device, VideoDeviceUpdate *update);
+void video_device_tick_frame(VideoDevice *device, VideoDeviceResult *result);
 
 /** Return true when the current backend display mode is text. */
 bool video_device_is_text_mode(VideoDevice *device);

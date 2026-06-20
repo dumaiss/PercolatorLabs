@@ -55,6 +55,8 @@ typedef struct {
     bool raw_terminal_input;
     /** Video backend selector. Currently only "tms9928" is accepted. */
     const char *video_backend;
+    /** Run built-in protocol smoke tests and exit. */
+    bool run_tests;
 } AppConfig;
 
 /** Print command-line usage to stderr. */

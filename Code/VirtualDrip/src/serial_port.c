@@ -248,43 +248,27 @@ int serial_port_baud_rate(const SerialPort *port)
 static bool build_packet_bytes(
     uint8_t type,
     const uint8_t *payload,
-    uint8_t length,
+    uint16_t length,
     uint8_t *bytes,
     size_t *byte_count)
 {
-    if (length > MAX_PACKET_PAYLOAD) {
-        fprintf(stderr, "Packet payload too large: %u bytes\n", length);
-        return false;
-    }
-
     Packet packet;
     packet.length = length;
     packet.type = type;
     if (length > 0 && payload != NULL) {
         memcpy(packet.payload, payload, length);
     }
-    packet.crc = packet_crc8(&packet);
-    uint8_t wire_length = packet_wire_length(&packet);
 
-    bytes[0] = PACKET_SYNC0;
-    bytes[1] = PACKET_SYNC1;
-    bytes[2] = wire_length;
-    bytes[3] = packet.type;
-    if (length > 0 && payload != NULL) {
-        memcpy(&bytes[4], packet.payload, length);
-    }
-    bytes[4 + length] = packet.crc;
-    *byte_count = (size_t)wire_length + PACKET_SYNC_SIZE;
-    return true;
+    return packet_encode(&packet, bytes, PACKET_MAX_WIRE_SIZE, byte_count);
 }
 
-bool serial_port_send_packet(SerialPort *port, uint8_t type, const uint8_t *payload, uint8_t length)
+bool serial_port_send_packet(SerialPort *port, uint8_t type, const uint8_t *payload, uint16_t length)
 {
     if (port == NULL || port->fd < 0) {
         return false;
     }
 
-    uint8_t bytes[PACKET_SYNC_SIZE + 255];
+    uint8_t bytes[PACKET_MAX_WIRE_SIZE];
     size_t byte_count = 0;
     if (!build_packet_bytes(type, payload, length, bytes, &byte_count)) {
         return false;
@@ -305,14 +289,14 @@ bool serial_port_send_packet_paced(
     SerialPort *port,
     uint8_t type,
     const uint8_t *payload,
-    uint8_t length,
+    uint16_t length,
     unsigned inter_byte_delay_us)
 {
     if (port == NULL || port->fd < 0) {
         return false;
     }
 
-    uint8_t bytes[PACKET_SYNC_SIZE + 255];
+    uint8_t bytes[PACKET_MAX_WIRE_SIZE];
     size_t byte_count = 0;
     if (!build_packet_bytes(type, payload, length, bytes, &byte_count)) {
         return false;

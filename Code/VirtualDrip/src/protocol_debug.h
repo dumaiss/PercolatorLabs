@@ -15,7 +15,7 @@
 #include <stdint.h>
 
 /** Print payload bytes as uppercase hex, or "none" for an empty payload. */
-void print_payload_hex(const uint8_t *payload, uint8_t length);
+void print_payload_hex(const uint8_t *payload, uint16_t length);
 
 /** Print packet-type-specific details such as data value or key fields. */
 void print_packet_detail(const Packet *packet);

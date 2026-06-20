@@ -43,12 +43,12 @@ int serial_port_baud_rate(const SerialPort *port);
 /**
  * Build and write one Virtual Drip packet under the TX mutex.
  *
- * The packet bytes are SYNC0, SYNC1, LEN, TYPE, PAYLOAD, CRC8. LEN counts the
- * complete packet body after the sync bytes, including LEN itself and CRC8.
- * With CRTSCTS enabled, the kernel gates physical transmission on peer CTS.
- * The userspace call returns after bytes are accepted into the serial driver.
+ * The packet bytes are SYNC0, SYNC1, 16-bit LE declared length, TYPE, and
+ * PAYLOAD. No CRC is appended. With CRTSCTS enabled, the kernel gates
+ * physical transmission on peer CTS. The userspace call returns after bytes
+ * are accepted into the serial driver.
  */
-bool serial_port_send_packet(SerialPort *port, uint8_t type, const uint8_t *payload, uint8_t length);
+bool serial_port_send_packet(SerialPort *port, uint8_t type, const uint8_t *payload, uint16_t length);
 
 /**
  * Build and write one Virtual Drip packet with a delay between bytes.
@@ -61,7 +61,7 @@ bool serial_port_send_packet_paced(
     SerialPort *port,
     uint8_t type,
     const uint8_t *payload,
-    uint8_t length,
+    uint16_t length,
     unsigned inter_byte_delay_us);
 
 /**

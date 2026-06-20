@@ -50,7 +50,7 @@ static bool storage_send_read_reply(SerialPort *serial_port, uint8_t seq, uint8_
         serial_port,
         PACKET_STORAGE_READ_REPLY,
         reply,
-        (uint8_t)sizeof(reply),
+        (uint16_t)sizeof(reply),
         STORAGE_REPLY_INTER_BYTE_DELAY_US);
     if (!sent) {
         fprintf(stderr, "Failed to send STORAGE_READ_REPLY seq=%u status=0x%02X\n", seq, status);
@@ -68,7 +68,7 @@ static bool storage_send_write_reply(SerialPort *serial_port, uint8_t seq, uint8
         serial_port,
         PACKET_STORAGE_WRITE_REPLY,
         reply,
-        (uint8_t)sizeof(reply),
+        (uint16_t)sizeof(reply),
         STORAGE_REPLY_INTER_BYTE_DELAY_US);
     if (!sent) {
         fprintf(stderr, "Failed to send STORAGE_WRITE_REPLY seq=%u status=0x%02X\n", seq, status);

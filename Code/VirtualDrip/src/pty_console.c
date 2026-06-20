@@ -191,7 +191,7 @@ static void *pty_console_reader_thread(void *context)
                 console->serial_port,
                 PACKET_TERMINAL_RX,
                 buffer,
-                (uint8_t)bytes_read);
+                (uint16_t)bytes_read);
             if (console->log_packets) {
                 fprintf(stderr, "TERMINAL_RX len=%zd sent=%s\n", bytes_read, sent ? "ok" : "failed");
             }

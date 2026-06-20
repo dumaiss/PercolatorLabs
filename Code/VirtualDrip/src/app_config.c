@@ -20,13 +20,14 @@ void print_usage(const char *program_name)
     fprintf(stderr, "  --disk-a: drive A disk image path, default %s\n", DEFAULT_DISK_A_PATH);
     fprintf(stderr, "  --vnc-port: VNC TCP port, default %d\n", DEFAULT_VNC_PORT);
     fprintf(stderr, "  --no-vnc, --headless: disable VNC output\n");
-    fprintf(stderr, "  --video-backend: video backend, default %s (available: tms9928, vdrip9928)\n", DEFAULT_VIDEO_BACKEND);
+    fprintf(stderr, "  --video-backend: video backend, default %s (available: tms9928, vdrip9928, vdrip9958)\n", DEFAULT_VIDEO_BACKEND);
     fprintf(stderr, "  --log-keys: log RFB key events, mappings, and raw serial terminal input bytes\n");
     fprintf(stderr, "  --log-storage: log storage request/reply summaries\n");
     fprintf(stderr, "  --log-packets: log decoded non-storage packets\n");
     fprintf(stderr, "  --console-pty, --pty-console: expose packetized console through a Linux PTY in serial mode\n");
     fprintf(stderr, "  --no-keyboard: disable VNC keyboard capture\n");
     fprintf(stderr, "  --raw-terminal-input: send proxy->Z80 keyboard bytes raw (default)\n");
+    fprintf(stderr, "  --test: run built-in protocol smoke tests and exit\n");
 }
 
 static bool parse_int_range(const char *text, int min_value, int max_value, int *result)
@@ -57,6 +58,7 @@ bool parse_args(int argc, char **argv, AppConfig *config)
     config->console_pty = false;
     config->raw_terminal_input = true;
     config->video_backend = DEFAULT_VIDEO_BACKEND;
+    config->run_tests = false;
 
     for (int index = 1; index < argc; ++index) {
         const char *arg = argv[index];
@@ -118,6 +120,11 @@ bool parse_args(int argc, char **argv, AppConfig *config)
                 return false;
             }
             config->video_backend = argv[index];
+            continue;
+        }
+
+        if (strcmp(arg, "--test") == 0) {
+            config->run_tests = true;
             continue;
         }
         if (strcmp(arg, "--file") == 0) {

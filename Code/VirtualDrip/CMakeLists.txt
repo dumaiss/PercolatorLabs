@@ -30,6 +30,7 @@ set(VIRTUAL_VDP_EXTERNALS_DIR "${CMAKE_BINARY_DIR}/externals"
 
 add_subdirectory(backends/vrEmuTms9918)
 add_subdirectory(backends/vDrip9928)
+add_subdirectory(backends/vDrip9958)
 
 # Route every backend library into the shared externals directory.
 set(VIRTUAL_VDP_BACKEND_TARGETS
@@ -37,6 +38,7 @@ set(VIRTUAL_VDP_BACKEND_TARGETS
     vrEmuTms9918Util
     vdrip_vdp
     vdrip_vdp_util
+    vdrip9958
 )
 set_target_properties(${VIRTUAL_VDP_BACKEND_TARGETS} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${VIRTUAL_VDP_EXTERNALS_DIR}"
@@ -67,7 +69,9 @@ add_executable(virtual-vdp
     src/video_device.c
     src/video_device_tms9928.c
     src/video_device_vdrip9928.c
+    src/video_device_vdrip9958.c
     src/virtual_text_cursor.c
+    src/test_protocol.c
 )
 
 # Linking the backend targets pulls in their INTERFACE include directories
@@ -79,6 +83,7 @@ target_link_libraries(virtual-vdp
         vrEmuTms9918Util
         vdrip_vdp
         vdrip_vdp_util
+        vdrip9958
         LibVNCServer::LibVNCServer
         Threads::Threads
 )

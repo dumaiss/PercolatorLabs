@@ -1,10 +1,10 @@
 """Helpers for generating Virtual Drip packet streams.
 
 Packet constants mirror src/protocol.h:
-  [SYNC0=0xA5][SYNC1=0x5A][LEN][TYPE][PAYLOAD...][CRC8]
+  [SYNC0=0xA5][SYNC1=0x5A][LEN_LO][LEN_HI][TYPE][PAYLOAD...]
 
-LEN counts the complete packet body after the sync bytes: LEN, TYPE, PAYLOAD, and CRC8.
-CRC8 covers LEN, TYPE, and PAYLOAD only.
+Declared length (16-bit LE) counts TYPE + PAYLOAD bytes (1..1025).
+No CRC, checksum, or integrity field.
 
 These helpers generate VDP-visible state changes, not screenshots. The output
 files can be fed to the proxy through file replay or streamed through
@@ -19,6 +19,7 @@ from typing import Iterable
 
 PACKET_SYNC0 = 0xA5
 PACKET_SYNC1 = 0x5A
+MAX_PACKET_PAYLOAD = 1024
 
 PACKET_VDP_CTRL_WRITE = 0x01
 PACKET_VDP_DATA_WRITE = 0x02
@@ -39,6 +40,18 @@ PACKET_STORAGE_WRITE_REQ = 0x0F
 PACKET_STORAGE_WRITE_REPLY = 0x10
 PACKET_TERMINAL_TX = 0x11
 PACKET_TERMINAL_RX = 0x12
+PACKET_VDP_PALETTE_WRITE = 0x13
+PACKET_VDP_INDIRECT_WRITE = 0x14
+PACKET_VDP_STATUS_READ_REQ = 0x15
+PACKET_VDP_DATA_READ_REQ = 0x16
+PACKET_VDP_STATUS_REPLY = 0x17
+PACKET_VDP_DATA_REPLY = 0x18
+PACKET_PROTOCOL_ERROR = 0x19
+PACKET_COMMAND_STREAM = 0x1A
+PACKET_VRAM_UPLOAD_BEGIN = 0x1B
+PACKET_VRAM_UPLOAD_DATA = 0x1C
+PACKET_VRAM_UPLOAD_END = 0x1D
+PACKET_PACKET_RESET = 0x1E
 
 CURSOR_ENABLE = 0x01
 CURSOR_SHOW = 0x02
@@ -68,30 +81,19 @@ G2_COLOR_TABLE = 0x2000
 G2_NAME_TABLE = 0x3800
 
 
-def crc8(data: bytes | bytearray | Iterable[int]) -> int:
-    """Return protocol CRC8 using polynomial 0x07 and initial value 0x00."""
-
-    crc = 0
-    for value in data:
-        crc ^= value & 0xFF
-        for _ in range(8):
-            if crc & 0x80:
-                crc = ((crc << 1) ^ 0x07) & 0xFF
-            else:
-                crc = (crc << 1) & 0xFF
-    return crc
-
-
 def packet(packet_type: int, payload: bytes | bytearray | Iterable[int] = b"") -> bytes:
-    """Wrap one packet as SYNC, LEN, TYPE, PAYLOAD, CRC8."""
+    """Wrap one packet as SYNC0, SYNC1, LEN_LO, LEN_HI, TYPE, PAYLOAD."""
 
     body_payload = bytes(payload)
-    if len(body_payload) > 252:
-        raise ValueError("Virtual Drip packets support at most 252 payload bytes")
+    if len(body_payload) > MAX_PACKET_PAYLOAD:
+        raise ValueError(f"Virtual Drip packets support at most {MAX_PACKET_PAYLOAD} payload bytes")
 
-    wire_length = len(body_payload) + 3
-    body = bytes([wire_length, packet_type & 0xFF]) + body_payload
-    return bytes([PACKET_SYNC0, PACKET_SYNC1]) + body + bytes([crc8(body)])
+    declared = len(body_payload) + 1  # includes type byte
+    return bytes([
+        PACKET_SYNC0, PACKET_SYNC1,
+        declared & 0xFF, (declared >> 8) & 0xFF,
+        packet_type & 0xFF,
+    ]) + body_payload
 
 
 def vdp_ctrl(value: int) -> bytes:

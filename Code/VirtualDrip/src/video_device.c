@@ -6,49 +6,66 @@
  * stay small.
  */
 
-void video_device_update_clear(VideoDeviceUpdate *update)
+void video_device_result_clear(VideoDeviceResult *result)
 {
-    if (update == NULL) {
+    if (result == NULL) {
         return;
     }
 
-    update->framebuffer_dirty = false;
-    update->dirty_x = 0;
-    update->dirty_y = 0;
-    update->dirty_w = 0;
-    update->dirty_h = 0;
+    result->accepted = false;
+    result->framebuffer_dirty = false;
+    result->presentation_requested = false;
+    result->dirty_x = 0;
+    result->dirty_y = 0;
+    result->dirty_w = 0;
+    result->dirty_h = 0;
+    result->reply_kind = VIDEO_REPLY_NONE;
+    result->reply_value = 0;
 }
 
-void video_device_update_mark_full(VideoDevice *device, VideoDeviceUpdate *update)
+void video_device_result_mark_full(VideoDevice *device, VideoDeviceResult *result)
 {
-    if (device == NULL || update == NULL) {
+    if (device == NULL || result == NULL) {
         return;
     }
 
-    update->framebuffer_dirty = true;
-    update->dirty_x = 0;
-    update->dirty_y = 0;
-    update->dirty_w = device->info.width;
-    update->dirty_h = device->info.height;
+    result->framebuffer_dirty = true;
+    result->dirty_x = 0;
+    result->dirty_y = 0;
+    result->dirty_w = device->info.width;
+    result->dirty_h = device->info.height;
 }
 
-bool video_device_reset(VideoDevice *device)
+bool video_device_reset(VideoDevice *device, VideoDeviceResult *result)
 {
+    video_device_result_clear(result);
     if (device == NULL || device->ops == NULL || device->ops->reset == NULL) {
         return false;
     }
 
-    return device->ops->reset(device);
+    return device->ops->reset(device, result);
 }
 
-bool video_device_handle_packet(VideoDevice *device, const Packet *packet, VideoDeviceUpdate *update)
+bool video_device_handle_packet(VideoDevice *device, const Packet *packet, VideoDeviceResult *result)
 {
-    video_device_update_clear(update);
+    video_device_result_clear(result);
     if (device == NULL || device->ops == NULL || device->ops->handle_packet == NULL) {
         return false;
     }
 
-    return device->ops->handle_packet(device, packet, update);
+    return device->ops->handle_packet(device, packet, result);
+}
+
+bool video_device_frame_mark(VideoDevice *device, VideoDeviceResult *result)
+{
+    video_device_result_clear(result);
+    if (device == NULL || device->ops == NULL || device->ops->frame_mark == NULL) {
+        /* default: presentation-only */
+        result->presentation_requested = true;
+        return true;
+    }
+
+    return device->ops->frame_mark(device, result);
 }
 
 bool video_device_render_framebuffer(VideoDevice *device, uint32_t *framebuffer, int width, int height)
@@ -60,14 +77,14 @@ bool video_device_render_framebuffer(VideoDevice *device, uint32_t *framebuffer,
     return device->ops->render_framebuffer(device, framebuffer, width, height);
 }
 
-void video_device_tick_frame(VideoDevice *device, VideoDeviceUpdate *update)
+void video_device_tick_frame(VideoDevice *device, VideoDeviceResult *result)
 {
-    video_device_update_clear(update);
+    video_device_result_clear(result);
     if (device == NULL || device->ops == NULL || device->ops->tick_frame == NULL) {
         return;
     }
 
-    device->ops->tick_frame(device, update);
+    device->ops->tick_frame(device, result);
 }
 
 bool video_device_is_text_mode(VideoDevice *device)

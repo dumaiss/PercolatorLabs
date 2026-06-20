@@ -66,11 +66,6 @@ static void *serial_reader_thread(void *context)
     printf("Serial packet input stopped after %zu packet%s",
         packet_parser_packet_count(&parser),
         packet_parser_packet_count(&parser) == 1 ? "" : "s");
-    if (packet_parser_crc_errors(&parser) > 0) {
-        printf(" (%zu CRC error%s)",
-            packet_parser_crc_errors(&parser),
-            packet_parser_crc_errors(&parser) == 1 ? "" : "s");
-    }
     printf("\n");
 
     return NULL;

@@ -49,7 +49,7 @@ static Tms9928Device *tms9928_impl(VideoDevice *device)
     return (Tms9928Device *)device->impl;
 }
 
-static bool tms9928_reset(VideoDevice *device)
+static bool tms9928_reset(VideoDevice *device, VideoDeviceResult *result)
 {
     Tms9928Device *impl = tms9928_impl(device);
 
@@ -64,8 +64,8 @@ static bool tms9928_reset(VideoDevice *device)
         return false;
     }
 
-    impl->control_writes = 0;
-    impl->data_writes = 0;
+    result->accepted = true;
+    result->framebuffer_dirty = true;
     return true;
 }
 
@@ -83,7 +83,7 @@ static void tms9928_write_data(Tms9928Device *impl, uint8_t value)
     /* printf("  VDP DATA write value=0x%02X (vrEmuTms9918, count=%zu)\n", value, impl->data_writes); */
 }
 
-static bool tms9928_handle_packet(VideoDevice *device, const Packet *packet, VideoDeviceUpdate *update)
+static bool tms9928_handle_packet(VideoDevice *device, const Packet *packet, VideoDeviceResult *result)
 {
     Tms9928Device *impl = tms9928_impl(device);
 
@@ -95,7 +95,7 @@ static bool tms9928_handle_packet(VideoDevice *device, const Packet *packet, Vid
         }
         tms9928_write_control(impl, packet->payload[0]);
         /* Register/address writes can alter display interpretation. */
-        video_device_update_mark_full(device, update);
+        video_device_result_mark_full(device, result);
         return true;
     case PACKET_VDP_DATA_WRITE:
         if (packet->length != 1) {
@@ -104,7 +104,7 @@ static bool tms9928_handle_packet(VideoDevice *device, const Packet *packet, Vid
         }
         tms9928_write_data(impl, packet->payload[0]);
         /* VRAM writes may affect any rendered pixel, so mark conservatively. */
-        video_device_update_mark_full(device, update);
+        video_device_result_mark_full(device, result);
         return true;
     case PACKET_VDP_DATA_BLOCK:
         if (packet->length == 0 || packet->length > MAX_PACKET_PAYLOAD) {
@@ -118,11 +118,11 @@ static bool tms9928_handle_packet(VideoDevice *device, const Packet *packet, Vid
            so multi-packet bursts (scroll, clear) produce a single update. */
         return true;
     case PACKET_RESET:
-        if (!tms9928_reset(device)) {
+        if (!tms9928_reset(device, result)) {
             return false;
         }
         /* printf("  VDP reset (%s)\n", device->info.name); */
-        video_device_update_mark_full(device, update);
+        video_device_result_mark_full(device, result);
         return true;
     default:
         /* PING, FRAME_MARK, TERMINAL_INPUT, and read requests are no-ops here today. */
@@ -153,11 +153,11 @@ static bool tms9928_render_framebuffer(VideoDevice *device, uint32_t *framebuffe
     return true;
 }
 
-static void tms9928_tick_frame(VideoDevice *device, VideoDeviceUpdate *update)
+static void tms9928_tick_frame(VideoDevice *device, VideoDeviceResult *result)
 {
     (void)device;
+    (void)result;
     /* The emulator currently advances purely through port writes. */
-    video_device_update_clear(update);
 }
 
 static bool tms9928_is_text_mode(VideoDevice *device)
@@ -188,6 +188,7 @@ static void tms9928_destroy(VideoDevice *device)
 static const VideoDeviceOps tms9928_ops = {
     .reset = tms9928_reset,
     .handle_packet = tms9928_handle_packet,
+    .frame_mark = NULL,
     .render_framebuffer = tms9928_render_framebuffer,
     .tick_frame = tms9928_tick_frame,
     .is_text_mode = tms9928_is_text_mode,
@@ -216,8 +217,12 @@ VideoDevice *video_device_tms9928_create(void)
     device->info.height = TMS9918_PIXELS_Y;
     device->info.supports_status_read = false;
     device->info.supports_data_read = false;
+    device->info.supports_palette_port = false;
+    device->info.supports_indirect_port = false;
+    device->info.allows_proxy_cursor_overlay = true;
 
-    if (!video_device_reset(device)) {
+    VideoDeviceResult result;
+    if (!video_device_reset(device, &result)) {
         video_device_destroy(device);
         return NULL;
     }

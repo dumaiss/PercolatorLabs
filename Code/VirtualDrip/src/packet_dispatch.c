@@ -81,12 +81,14 @@ void packet_dispatch_render(PacketDispatch *dispatch)
         dispatch->framebuffer,
         dispatch->framebuffer_width,
         dispatch->framebuffer_height);
-    virtual_text_cursor_render_overlay(
-        &dispatch->cursor,
-        dispatch->framebuffer,
-        dispatch->framebuffer_width,
-        dispatch->framebuffer_height,
-        video_device_is_text_mode(dispatch->video_device));
+    if (dispatch->video_device->info.allows_proxy_cursor_overlay) {
+        virtual_text_cursor_render_overlay(
+            &dispatch->cursor,
+            dispatch->framebuffer,
+            dispatch->framebuffer_width,
+            dispatch->framebuffer_height,
+            video_device_is_text_mode(dispatch->video_device));
+    }
     pthread_mutex_unlock(dispatch->framebuffer_mutex);
 
     if (dispatch->frame_changed != NULL) {
@@ -110,10 +112,35 @@ void packet_dispatch_destroy(PacketDispatch *dispatch)
     virtual_text_cursor_destroy(&dispatch->cursor);
 }
 
+static void dispatch_send_reply(PacketDispatch *dispatch, const VideoDeviceResult *result)
+{
+    if (result->reply_kind == VIDEO_REPLY_NONE) {
+        return;
+    }
+
+    uint8_t reply_type;
+    switch (result->reply_kind) {
+    case VIDEO_REPLY_STATUS_BYTE:
+        reply_type = PACKET_VDP_STATUS_REPLY;
+        break;
+    case VIDEO_REPLY_DATA_BYTE:
+        reply_type = PACKET_VDP_DATA_REPLY;
+        break;
+    case VIDEO_REPLY_PROTOCOL_ERROR:
+        reply_type = PACKET_PROTOCOL_ERROR;
+        break;
+    default:
+        return;
+    }
+
+    serial_port_send_packet(dispatch->serial_port, reply_type,
+                            &result->reply_value, 1);
+}
+
 void packet_dispatch_handle_packet(const Packet *packet, size_t offset, void *userdata)
 {
     PacketDispatch *dispatch = (PacketDispatch *)userdata;
-    VideoDeviceUpdate update;
+    VideoDeviceResult result;
 
     (void)offset;
 
@@ -138,24 +165,58 @@ void packet_dispatch_handle_packet(const Packet *packet, size_t offset, void *us
     }
 
     if (packet->type == PACKET_FRAME_MARK) {
-        /* FRAME_MARK is the explicit render trigger after a burst of
-           silent DATA_BLOCK writes.  Render the current VRAM state. */
+        (void)video_device_frame_mark(dispatch->video_device, &result);
+        dispatch_send_reply(dispatch, &result);
         pthread_mutex_lock(dispatch->framebuffer_mutex);
-        (void)video_device_render_framebuffer(
-            dispatch->video_device,
-            dispatch->framebuffer,
-            dispatch->framebuffer_width,
-            dispatch->framebuffer_height);
-        virtual_text_cursor_render_overlay(
-            &dispatch->cursor,
-            dispatch->framebuffer,
-            dispatch->framebuffer_width,
-            dispatch->framebuffer_height,
-            video_device_is_text_mode(dispatch->video_device));
+        if (result.presentation_requested || result.framebuffer_dirty) {
+            (void)video_device_render_framebuffer(
+                dispatch->video_device,
+                dispatch->framebuffer,
+                dispatch->framebuffer_width,
+                dispatch->framebuffer_height);
+            if (dispatch->video_device->info.allows_proxy_cursor_overlay) {
+                virtual_text_cursor_render_overlay(
+                    &dispatch->cursor,
+                    dispatch->framebuffer,
+                    dispatch->framebuffer_width,
+                    dispatch->framebuffer_height,
+                    video_device_is_text_mode(dispatch->video_device));
+            }
+        }
         pthread_mutex_unlock(dispatch->framebuffer_mutex);
-        if (dispatch->frame_changed != NULL) {
+        if ((result.presentation_requested || result.framebuffer_dirty)
+            && dispatch->frame_changed != NULL) {
             dispatch->frame_changed(dispatch->frame_changed_userdata);
         }
+        /* Render first, then reset retained accelerator metadata.
+         * Upload state survives FRAME_MARK. */
+        stream_state_reset(&dispatch->stream_state);
+        return;
+    }
+
+    if (packet->type == PACKET_PACKET_RESET) {
+        /* Full reset: emulator + retained state + upload */
+        VideoDeviceResult reset_result;
+        video_device_result_clear(&reset_result);
+        (void)video_device_reset(dispatch->video_device, &reset_result);
+        stream_state_reset(&dispatch->stream_state);
+        upload_state_reset(&dispatch->upload_state);
+        if (reset_result.framebuffer_dirty) {
+            packet_dispatch_render(dispatch);
+        }
+        return;
+    }
+
+    if (packet->type == PACKET_COMMAND_STREAM) {
+        StreamResult stream_result;
+        bool ok = stream_decode(
+            packet->payload, packet->length,
+            &dispatch->stream_state, &dispatch->upload_state,
+            &stream_result, dispatch->video_device);
+        if (stream_result.framebuffer_dirty) {
+            packet_dispatch_render(dispatch);
+        }
+        (void)ok;
         return;
     }
 
@@ -173,24 +234,29 @@ void packet_dispatch_handle_packet(const Packet *packet, size_t offset, void *us
         return;
     }
 
+    /* Route to video backend: VDP writes, reads, palette, indirect, etc. */
     pthread_mutex_lock(dispatch->framebuffer_mutex);
-    (void)video_device_handle_packet(dispatch->video_device, packet, &update);
-    if (update.framebuffer_dirty) {
+    (void)video_device_handle_packet(dispatch->video_device, packet, &result);
+    if (result.framebuffer_dirty) {
         (void)video_device_render_framebuffer(
             dispatch->video_device,
             dispatch->framebuffer,
             dispatch->framebuffer_width,
             dispatch->framebuffer_height);
-        virtual_text_cursor_render_overlay(
-            &dispatch->cursor,
-            dispatch->framebuffer,
-            dispatch->framebuffer_width,
-            dispatch->framebuffer_height,
-            video_device_is_text_mode(dispatch->video_device));
+        if (dispatch->video_device->info.allows_proxy_cursor_overlay) {
+            virtual_text_cursor_render_overlay(
+                &dispatch->cursor,
+                dispatch->framebuffer,
+                dispatch->framebuffer_width,
+                dispatch->framebuffer_height,
+                video_device_is_text_mode(dispatch->video_device));
+        }
     }
     pthread_mutex_unlock(dispatch->framebuffer_mutex);
 
-    if (update.framebuffer_dirty && dispatch->frame_changed != NULL) {
+    dispatch_send_reply(dispatch, &result);
+
+    if (result.framebuffer_dirty && dispatch->frame_changed != NULL) {
         dispatch->frame_changed(dispatch->frame_changed_userdata);
     }
 }
@@ -204,7 +270,7 @@ int packet_dispatch_replay_file(PacketDispatch *dispatch, const char *path)
 
     printf("Decoded %zu packet%s", dispatch->packet_count, dispatch->packet_count == 1 ? "" : "s");
     if (status > 0) {
-        printf(" (CRC errors skipped)");
+        printf(" (framing errors skipped)");
     }
     printf("; video backend: %s\n", dispatch->video_device->info.name);
     return status;

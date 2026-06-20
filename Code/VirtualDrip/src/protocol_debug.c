@@ -4,14 +4,14 @@
 
 /* Keep verbose packet logging out of parser/dispatch core logic. */
 
-void print_payload_hex(const uint8_t *payload, uint8_t length)
+void print_payload_hex(const uint8_t *payload, uint16_t length)
 {
     if (length == 0) {
         printf("none");
         return;
     }
 
-    for (uint8_t index = 0; index < length; ++index) {
+    for (uint16_t index = 0; index < length; ++index) {
         printf("%s%02X", index == 0 ? "" : " ", payload[index]);
     }
 }
@@ -42,13 +42,12 @@ void print_packet_detail(const Packet *packet)
 void print_packet(size_t packet_index, size_t offset, const Packet *packet)
 {
     printf(
-        "#%zu offset=%zu type=0x%02X %-16s len=%u crc=0x%02X payload=",
+        "#%zu offset=%zu type=0x%02X %-16s len=%u payload=",
         packet_index,
         offset,
         packet->type,
         packet_type_name(packet->type),
-        packet->length,
-        packet->crc);
+        packet->length);
     print_payload_hex(packet->payload, packet->length);
     print_packet_detail(packet);
     printf("\n");

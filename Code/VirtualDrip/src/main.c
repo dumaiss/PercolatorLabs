@@ -18,6 +18,9 @@
 #include "display_libvncserver.h"
 #include "input_keyboard.h"
 #include "keyboard_transport.h"
+
+/* Forward declaration for built-in protocol tests. */
+int test_protocol(void);
 #include "packet_dispatch.h"
 #include "pty_console.h"
 #include "serial_port.h"
@@ -26,6 +29,7 @@
 #include "video_device.h"
 #include "video_device_tms9928.h"
 #include "video_device_vdrip9928.h"
+#include "video_device_vdrip9958.h"
 
 #include <pthread.h>
 #include <stdint.h>
@@ -46,8 +50,11 @@ static VideoDevice *create_video_backend(const char *backend_name)
     if (strcmp(backend_name, "vdrip9928") == 0) {
         return video_device_vdrip9928_create();
     }
+    if (strcmp(backend_name, "vdrip9958") == 0) {
+        return video_device_vdrip9958_create();
+    }
 
-    fprintf(stderr, "Unsupported video backend: %s. Available: tms9928, vdrip9928\n", backend_name);
+    fprintf(stderr, "Unsupported video backend: %s. Available: tms9928, vdrip9928, vdrip9958\n", backend_name);
     return NULL;
 }
 
@@ -57,6 +64,10 @@ int main(int argc, char **argv)
     if (!parse_args(argc, argv, &config)) {
         print_usage(argv[0]);
         return 1;
+    }
+
+    if (config.run_tests) {
+        return test_protocol();
     }
 
     StorageBackend storage_backend;
