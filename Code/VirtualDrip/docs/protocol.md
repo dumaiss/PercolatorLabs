@@ -46,7 +46,7 @@ WAIT_SYNC0 → WAIT_SYNC1 → READ_LEN_LO → READ_LEN_HI → READ_TYPE → READ
 | 0x03 | `VDP_STATUS_READ` | Z→P | 0 | None (legacy) | All |
 | 0x04 | `VDP_DATA_READ` | Z→P | 0 | None (legacy) | All |
 | 0x0B | `VDP_DATA_BLOCK` | Z→P | 1..1024 bytes | None | All |
-| 0x0C | `VDP_SCROLL` | Z→P | 1 byte (rows) | None | vdrip9928, vdrip9958 |
+| 0x0C | `VDP_SCROLL` | Z→P | 1 byte (rows) | None | Legacy value; active BIOS uses `OP_SCROLL_UP` |
 
 ### Control
 

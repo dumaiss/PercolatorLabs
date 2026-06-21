@@ -7,9 +7,12 @@
 
 #include "protocol.h"
 #include "packet_parser.h"
+#include "video_device.h"
+#include "video_device_vdrip9958.h"
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* ------------------------------------------------------------------
@@ -322,6 +325,110 @@ static int test_upload(void)
     return 0;
 }
 
+static int test_v9958_cell_accelerator(void)
+{
+    VideoDevice *device = video_device_vdrip9958_create();
+    assert(device != NULL);
+
+    StreamState state;
+    stream_state_reset(&state);
+    state.screen_configured = true;
+    state.glyph_configured = true;
+    state.atlas_configured = true;
+    state.screen_base = 0x0D400;
+    state.glyph_base = 0x10000;
+    state.atlas_cols = 1;
+
+    /* G6, display on, page zero, sprite tables in high VRAM,
+     * 212-line interlace. */
+    const uint8_t regs[] = {
+        0, 12,
+        0x0A, 0x40, 0, 0, 0, 0xE4, 0x3F, 0x04, 0, 0x88, 0, 0x03
+    };
+    assert(video_device_vdrip9958_stream_op(
+        device, OP_REG_BLOCK, regs, sizeof(regs), &state));
+
+    /* Glyph zero: solid 6x8 mask at atlas origin. */
+    for (uint8_t row = 0; row < 8; ++row) {
+        uint32_t address = 0x10000u + (uint32_t)row * 256u;
+        uint8_t upload[] = {
+            (uint8_t)address, (uint8_t)(address >> 8), (uint8_t)(address >> 16),
+            3, 0xFF, 0xFF, 0xFF
+        };
+        assert(video_device_vdrip9958_stream_op(
+            device, OP_VRAM_ADDR_WRITE, upload, sizeof(upload), &state));
+    }
+
+    state.background = 4;
+    const uint8_t run[] = { 1, 0, 0, 15, 4, 0, 1, 0 };
+    assert(video_device_vdrip9958_stream_op(
+        device, OP_TEXT_RUN, run, sizeof(run), &state));
+
+    /* Dirty the normally-unused final G6 source line, then verify that a
+     * terminal clear also clears the complete visible page margins. */
+    const uint32_t bottom_address = 211u * 256u;
+    const uint8_t dirty_bottom[] = {
+        (uint8_t)bottom_address,
+        (uint8_t)(bottom_address >> 8),
+        (uint8_t)(bottom_address >> 16),
+        1, 0xFF
+    };
+    assert(video_device_vdrip9958_stream_op(
+        device, OP_VRAM_ADDR_WRITE,
+        dirty_bottom, sizeof(dirty_bottom), &state));
+    assert(video_device_vdrip9958_stream_op(
+        device, OP_CLEAR_SCREEN, NULL, 0, &state));
+
+    /* Install the BIOS-style 6x8 block sprite at row 0, column 1. */
+    const uint8_t cursor_pattern[] = {
+        0x00, 0xF8, 0x01, 8,
+        0xE0, 0xE0, 0xE0, 0xE0, 0xE0, 0xE0, 0xE0, 0xE0
+    };
+    const uint8_t cursor_colors[] = {
+        0x00, 0xF0, 0x01, 16,
+        0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F,
+        0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F
+    };
+    uint8_t cursor_sat[] = {
+        0x00, 0xF2, 0x01, 8,
+        7, 3, 0, 0, 0xD8, 0, 0, 0
+    };
+    assert(video_device_vdrip9958_stream_op(
+        device, OP_VRAM_ADDR_WRITE,
+        cursor_pattern, sizeof(cursor_pattern), &state));
+    assert(video_device_vdrip9958_stream_op(
+        device, OP_VRAM_ADDR_WRITE,
+        cursor_colors, sizeof(cursor_colors), &state));
+    assert(video_device_vdrip9958_stream_op(
+        device, OP_VRAM_ADDR_WRITE, cursor_sat, sizeof(cursor_sat), &state));
+
+    uint32_t *frame = calloc(512u * 424u, sizeof(*frame));
+    assert(frame != NULL);
+    assert(video_device_render_framebuffer(device, frame, 512, 424));
+    const uint32_t margin_color = frame[400u * 512u];
+    assert(margin_color != 0);
+    for (uint16_t y = 400; y < 424; ++y) {
+        for (uint16_t x = 0; x < 512; ++x) {
+            assert(frame[(uint32_t)y * 512u + x] == margin_color);
+        }
+    }
+    assert(frame[16u * 512u + 6u] != frame[16u * 512u + 100u]);
+
+    /* Move the SAT entry and verify the old position is erased and the new
+     * position is visible after the next render. */
+    cursor_sat[5] = 6;
+    assert(video_device_vdrip9958_stream_op(
+        device, OP_VRAM_ADDR_WRITE, cursor_sat, sizeof(cursor_sat), &state));
+    assert(video_device_render_framebuffer(device, frame, 512, 424));
+    assert(frame[16u * 512u + 6u] == frame[16u * 512u + 100u]);
+    assert(frame[16u * 512u + 12u] != frame[16u * 512u + 100u]);
+
+    free(frame);
+    video_device_destroy(device);
+    printf("  test_v9958_cell_accelerator: PASS\n");
+    return 0;
+}
+
 /* ------------------------------------------------------------------
  * Test entry point.
  * ------------------------------------------------------------------ */
@@ -337,6 +444,7 @@ int test_protocol(void)
     failures += test_type_only();
     failures += test_stream_decode();
     failures += test_upload();
+    failures += test_v9958_cell_accelerator();
 
     if (failures == 0) {
         printf("All protocol tests passed.\n");

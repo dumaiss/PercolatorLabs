@@ -216,6 +216,30 @@ static void test_sprite_mode2_and_collision(void)
   vDrip9958Destroy(v);
 }
 
+static void test_g6_sprite_horizontal_scale(void)
+{
+  VDrip9958* v = vDrip9958New();
+  uint32_t line[VDRIP9958_MAX_WIDTH];
+
+  set_mode(v, 0x0A, 0x00);          /* Graphic 6 -> 512-pixel sprite mode 2 */
+  write_reg(v, 5, 0x20);            /* SAT 0x1000; color table 0x0E00 */
+  write_reg(v, 6, 0x04);            /* pattern base 0x2000 */
+  write_full_sprite_pattern(v, 0x2000);
+  vram_write(v, 0x0E00, 0x0F);
+  vram_write(v, 0x1000, 0x00);
+  vram_write(v, 0x1001, 0x03);      /* hardware X=3 -> G6 pixels 6.. */
+  vram_write(v, 0x1002, 0x00);
+  vram_write(v, 0x1004, 0xD0);
+
+  vDrip9958ScanLine(v, 1, line);
+  CHECK(line[5] == pal(0, 0, 0));
+  CHECK(line[6] == pal(7, 7, 7));
+  CHECK(line[21] == pal(7, 7, 7));
+  CHECK(line[22] == pal(0, 0, 0));
+
+  vDrip9958Destroy(v);
+}
+
 static void test_frame_completion(void)
 {
   VDrip9958* v = vDrip9958New();
@@ -266,6 +290,7 @@ int main(void)
   test_interlace_metadata();
   test_sprite_mode1();
   test_sprite_mode2_and_collision();
+  test_g6_sprite_horizontal_scale();
   test_frame_completion();
   test_repeated_line_accumulates();
 

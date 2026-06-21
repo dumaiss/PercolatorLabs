@@ -16,8 +16,6 @@ src/                          — Proxy application
   storage_protocol.h/.c       — CP/M drive-image protocol
   storage_backend.h/.c        — Flat file image backend
   video_device.h/.c           — Generic backend contract + wrappers
-  video_device_tms9928.c      — TMS9918 adapter
-  video_device_vdrip9928.c    — vDrip9928 adapter
   video_device_vdrip9958.c    — V9958 adapter
   display_libvncserver.h/.c   — LibVNCServer wrapper
   virtual_text_cursor.h/.c    — Proxy cursor overlay

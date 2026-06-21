@@ -213,7 +213,13 @@ void packet_dispatch_handle_packet(const Packet *packet, size_t offset, void *us
             packet->payload, packet->length,
             &dispatch->stream_state, &dispatch->upload_state,
             &stream_result, dispatch->video_device);
-        if (stream_result.framebuffer_dirty) {
+        if (stream_result.presentation_requested) {
+            /* OP_PRESENT ends a VDP burst: release the keyboard gate so
+             * storage and keyboard resume. Unlike the FRAME_MARK path, the
+             * retained accelerator state (stream_state) is preserved. */
+            keyboard_transport_note_present(dispatch->keyboard_transport);
+        }
+        if (stream_result.presentation_requested) {
             packet_dispatch_render(dispatch);
         }
         (void)ok;

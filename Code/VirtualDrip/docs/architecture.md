@@ -7,7 +7,7 @@ Virtual Drip is a single native C11 process with five major boundaries:
 1. **Packet sources**: serial port (live Zephyr-80 link) or file replay
 2. **Protocol parsing**: streaming frame decoder producing complete packets
 3. **Packet dispatch**: central coordinator routing to services and video backend
-4. **Video device**: pluggable backend contract (TMS9928, vDrip9928, V9958)
+4. **Video device**: production V9958 adapter behind the stable device contract
 5. **Display**: LibVNCServer over a host-owned 32-bit RGB framebuffer
 
 ```mermaid
@@ -18,8 +18,6 @@ flowchart TD
     Dispatch --> PTY["PTY Console"]
     Dispatch --> Keyboard["Keyboard Gate"]
     Dispatch --> Video["VideoDevice Contract"]
-    Video --> TMS["TMS9928 Adapter"]
-    Video --> VD9928["vDrip9928 Adapter"]
     Video --> VD9958["vDrip9958 Adapter"]
     VD9958 --> Emu["Standalone vDrip9958 Library"]
     VD9958 --> Stream["Stream Decoder"]
@@ -112,14 +110,12 @@ framing. The dispatch layer owns reply encoding and VNC notification.
 ```c
 // main.c
 VideoDevice *create_video_backend(const char *name) {
-    if ("tms9928")  return video_device_tms9928_create();
-    if ("vdrip9928") return video_device_vdrip9928_create();
     if ("vdrip9958") return video_device_vdrip9958_create();
     return NULL;
 }
 ```
 
-Selected via `--video-backend` at startup. The framebuffer is allocated to
+`vdrip9958` is the only accepted backend value. The framebuffer is allocated to
 the backend's advertised `info.width × info.height`.
 
 ## V9958 Adapter Architecture

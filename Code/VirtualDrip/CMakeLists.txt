@@ -28,16 +28,10 @@ find_package(LibVNCServer REQUIRED)
 set(VIRTUAL_VDP_EXTERNALS_DIR "${CMAKE_BINARY_DIR}/externals"
     CACHE PATH "Directory where the built backend libraries are collected")
 
-add_subdirectory(backends/vrEmuTms9918)
-add_subdirectory(backends/vDrip9928)
 add_subdirectory(backends/vDrip9958)
 
 # Route every backend library into the shared externals directory.
 set(VIRTUAL_VDP_BACKEND_TARGETS
-    vrEmuTms9918
-    vrEmuTms9918Util
-    vdrip_vdp
-    vdrip_vdp_util
     vdrip9958
 )
 set_target_properties(${VIRTUAL_VDP_BACKEND_TARGETS} PROPERTIES
@@ -67,8 +61,6 @@ add_executable(virtual-vdp
     src/storage_backend.c
     src/storage_protocol.c
     src/video_device.c
-    src/video_device_tms9928.c
-    src/video_device_vdrip9928.c
     src/video_device_vdrip9958.c
     src/virtual_text_cursor.c
     src/test_protocol.c
@@ -79,10 +71,6 @@ add_executable(virtual-vdp
 # them, so the libraries are always built first.
 target_link_libraries(virtual-vdp
     PRIVATE
-        vrEmuTms9918
-        vrEmuTms9918Util
-        vdrip_vdp
-        vdrip_vdp_util
         vdrip9958
         LibVNCServer::LibVNCServer
         Threads::Threads

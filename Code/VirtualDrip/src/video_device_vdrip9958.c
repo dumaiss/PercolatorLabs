@@ -24,47 +24,15 @@ typedef struct {
     size_t indirect_writes;
     size_t status_reads;
     size_t data_reads;
+    uint8_t display_offset;
 } Vdrip9958Device;
 
 #define VDRIP9958_CANVAS_WIDTH   512
 #define VDRIP9958_CANVAS_HEIGHT  424
 #define VDRIP9958_CLEAR_COLOR    0x00000000u
-
-/* ------------------------------------------------------------------
- * Command classification
- *
- * Non-CPU-transfer commands are auto-completed after a control write.
- * CPU-transfer commands (LMCM, LMMV CPU-transfer variants) are left
- * active for the host to drive via CE/TR or all-data acceleration.
- *
- * Command codes derived from Yamaha V9958 documentation and the
- * vDrip9958 emulator's internal command implementation.
- * ------------------------------------------------------------------ */
-typedef enum {
-    V9958_CMD_CLASS_NONE,
-    V9958_CMD_CLASS_NON_CPU,
-    V9958_CMD_CLASS_CPU_TRANSFER,
-} V9958CommandClass;
-
-static V9958CommandClass classify_command(uint8_t command_byte)
-{
-    uint8_t code = command_byte & 0xF0;
-    switch (code) {
-    case 0x00: return V9958_CMD_CLASS_NON_CPU;  /* STOP     */
-    case 0x50: return V9958_CMD_CLASS_NON_CPU;  /* POINT    */
-    case 0x60: return V9958_CMD_CLASS_NON_CPU;  /* PSET     */
-    case 0x70: return V9958_CMD_CLASS_NON_CPU;  /* LINE     */
-    case 0x80: return V9958_CMD_CLASS_NON_CPU;  /* SRCH     */
-    case 0x90: return V9958_CMD_CLASS_NON_CPU;  /* LMMV     */
-    case 0xA0: return V9958_CMD_CLASS_NON_CPU;  /* LMMM     */
-    case 0xB0: return V9958_CMD_CLASS_NON_CPU;  /* LMMC     */
-    case 0xC0: return V9958_CMD_CLASS_NON_CPU;  /* HMMV     */
-    case 0xD0: return V9958_CMD_CLASS_NON_CPU;  /* HMMM     */
-    case 0xE0: return V9958_CMD_CLASS_NON_CPU;  /* YMMM     */
-    case 0xF0: return V9958_CMD_CLASS_NON_CPU;  /* HMMC     */
-    default:   return V9958_CMD_CLASS_NONE;
-    }
-}
+#define VDRIP9958_VRAM_SIZE      0x20000u
+#define VDRIP9958_G6_PITCH       256u
+#define VDRIP9958_BITMAP_BASE    0x00000u
 
 /* ------------------------------------------------------------------
  * Helpers
@@ -79,6 +47,195 @@ static void step_non_cpu_command(Vdrip9958Device *impl)
     while (vDrip9958StepCommand(impl->vdp)) {
         /* step to completion */
     }
+}
+
+static void write_register(Vdrip9958Device *impl, uint8_t reg, uint8_t value)
+{
+    vDrip9958WriteControl(impl->vdp, value);
+    vDrip9958WriteControl(impl->vdp, (uint8_t)(0x80u | (reg & 0x3Fu)));
+}
+
+static void set_vram_address(Vdrip9958Device *impl, uint32_t address, bool write_mode)
+{
+    address &= 0x1FFFFu;
+    write_register(impl, 14, (uint8_t)((address >> 14) & 0x07u));
+    vDrip9958WriteControl(impl->vdp, (uint8_t)address);
+    vDrip9958WriteControl(
+        impl->vdp,
+        (uint8_t)(((address >> 8) & 0x3Fu) | (write_mode ? 0x40u : 0u)));
+}
+
+static uint8_t read_vram(Vdrip9958Device *impl, uint32_t address)
+{
+    set_vram_address(impl, address, false);
+    return vDrip9958ReadData(impl->vdp);
+}
+
+static void write_vram(Vdrip9958Device *impl, uint32_t address, uint8_t value)
+{
+    set_vram_address(impl, address, true);
+    vDrip9958WriteData(impl->vdp, value);
+}
+
+static void write_vram_block(
+    Vdrip9958Device *impl, uint32_t address, const uint8_t *data, uint16_t length)
+{
+    set_vram_address(impl, address, true);
+    for (uint16_t i = 0; i < length; ++i) {
+        vDrip9958WriteData(impl->vdp, data[i]);
+    }
+}
+
+static void fill_vram(
+    Vdrip9958Device *impl, uint32_t address, uint8_t value, uint32_t length)
+{
+    set_vram_address(impl, address, true);
+    for (uint32_t i = 0; i < length; ++i) {
+        vDrip9958WriteData(impl->vdp, value);
+    }
+}
+
+static bool stream_ready(Vdrip9958Device *impl, const StreamState *state)
+{
+    VDrip9958DisplayInfo info = vDrip9958GetDisplayInfo(impl->vdp);
+    return state->screen_configured && state->glyph_configured &&
+           state->atlas_configured &&
+           info.mode == VDRIP9958_MODE_GRAPHIC6;
+}
+
+static uint32_t cell_address(const StreamState *state, uint8_t col, uint8_t row)
+{
+    return state->screen_base +
+           ((uint32_t)row * TEXT_COLS + (uint32_t)col) * CELL_BYTES;
+}
+
+static void read_cell(
+    Vdrip9958Device *impl, const StreamState *state,
+    uint8_t col, uint8_t row, uint8_t cell[CELL_BYTES])
+{
+    uint32_t address = cell_address(state, col, row);
+    for (uint8_t i = 0; i < CELL_BYTES; ++i) {
+        cell[i] = read_vram(impl, address + i);
+    }
+}
+
+static void write_cell(
+    Vdrip9958Device *impl, const StreamState *state,
+    uint8_t col, uint8_t row, const uint8_t cell[CELL_BYTES])
+{
+    write_vram_block(impl, cell_address(state, col, row), cell, CELL_BYTES);
+}
+
+static uint8_t atlas_pixel(
+    Vdrip9958Device *impl, const StreamState *state,
+    uint8_t ch, uint8_t x, uint8_t y)
+{
+    uint16_t sx = (uint16_t)(ch % state->atlas_cols) * GLYPH_WIDTH + x;
+    uint16_t sy = (uint16_t)(ch / state->atlas_cols) * GLYPH_HEIGHT + y;
+    uint32_t address = state->glyph_base +
+                       (uint32_t)sy * VDRIP9958_G6_PITCH + (sx >> 1);
+    uint8_t packed = read_vram(impl, address);
+    return (uint8_t)((sx & 1u) ? (packed & 0x0Fu) : (packed >> 4));
+}
+
+static void render_cell(
+    Vdrip9958Device *impl, const StreamState *state,
+    uint8_t col, uint8_t row, const uint8_t cell[CELL_BYTES])
+{
+    uint8_t fg = cell[1] & 0x0Fu;
+    uint8_t bg = cell[2] & 0x0Fu;
+    if (cell[2] & 0x80u) {
+        uint8_t t = fg;
+        fg = bg;
+        bg = t;
+    }
+
+    uint16_t dx = (uint16_t)col * GLYPH_WIDTH;
+    uint16_t dy = (uint16_t)((impl->display_offset +
+                              (uint16_t)row * GLYPH_HEIGHT) & 0xFFu);
+    for (uint8_t y = 0; y < GLYPH_HEIGHT; ++y) {
+        for (uint8_t x = 0; x < GLYPH_WIDTH; x += 2) {
+            uint8_t left = atlas_pixel(impl, state, cell[0], x, y) ? fg : bg;
+            uint8_t right = atlas_pixel(impl, state, cell[0], x + 1, y) ? fg : bg;
+            uint32_t address = VDRIP9958_BITMAP_BASE +
+                               (uint32_t)(dy + y) * VDRIP9958_G6_PITCH +
+                               (uint32_t)(dx + x) / 2u;
+            write_vram(impl, address, (uint8_t)((left << 4) | right));
+        }
+    }
+}
+
+static void fill_cells(
+    Vdrip9958Device *impl, const StreamState *state,
+    uint8_t col, uint8_t row, uint8_t width, uint8_t height, uint8_t ch)
+{
+    uint8_t cell[CELL_BYTES] = {
+        ch,
+        (uint8_t)(state->foreground & 0x0Fu),
+        (uint8_t)((state->background & 0x0Fu) | (state->reverse ? 0x80u : 0u))
+    };
+    for (uint8_t r = 0; r < height; ++r) {
+        for (uint8_t c = 0; c < width; ++c) {
+            write_cell(impl, state, (uint8_t)(col + c), (uint8_t)(row + r), cell);
+            render_cell(impl, state, (uint8_t)(col + c), (uint8_t)(row + r), cell);
+        }
+    }
+}
+
+static void copy_cells(
+    Vdrip9958Device *impl, const StreamState *state,
+    uint8_t sc, uint8_t sr, uint8_t dc, uint8_t dr, uint8_t width, uint8_t height)
+{
+    int r0 = 0, r1 = height, rs = 1;
+    int c0 = 0, c1 = width, cs = 1;
+    if (dr > sr) {
+        r0 = height - 1; r1 = -1; rs = -1;
+    }
+    if (dr == sr && dc > sc) {
+        c0 = width - 1; c1 = -1; cs = -1;
+    }
+    for (int r = r0; r != r1; r += rs) {
+        for (int c = c0; c != c1; c += cs) {
+            uint8_t cell[CELL_BYTES];
+            read_cell(impl, state, (uint8_t)(sc + c), (uint8_t)(sr + r), cell);
+            write_cell(impl, state, (uint8_t)(dc + c), (uint8_t)(dr + r), cell);
+            render_cell(impl, state, (uint8_t)(dc + c), (uint8_t)(dr + r), cell);
+        }
+    }
+}
+
+static bool valid_rect(uint8_t col, uint8_t row, uint8_t width, uint8_t height)
+{
+    return width != 0 && height != 0 &&
+           (uint16_t)col + width <= TEXT_COLS &&
+           (uint16_t)row + height <= TEXT_ROWS;
+}
+
+static bool scroll_region(
+    Vdrip9958Device *impl, const StreamState *state,
+    uint8_t top, uint8_t bottom, int8_t count)
+{
+    if (top > bottom || bottom >= TEXT_ROWS || count == 0) {
+        return false;
+    }
+    uint8_t rows = (uint8_t)(bottom - top + 1);
+    uint8_t amount = (uint8_t)(count < 0 ? -count : count);
+    if (amount > rows) amount = rows;
+    if (count > 0) {
+        if (amount < rows) {
+            copy_cells(impl, state, 0, (uint8_t)(top + amount),
+                       0, top, TEXT_COLS, (uint8_t)(rows - amount));
+        }
+        fill_cells(impl, state, 0, (uint8_t)(bottom - amount + 1),
+                   TEXT_COLS, amount, 0x20);
+    } else {
+        if (amount < rows) {
+            copy_cells(impl, state, 0, top, 0, (uint8_t)(top + amount),
+                       TEXT_COLS, (uint8_t)(rows - amount));
+        }
+        fill_cells(impl, state, 0, top, TEXT_COLS, amount, 0x20);
+    }
+    return true;
 }
 
 /* ------------------------------------------------------------------
@@ -105,6 +262,7 @@ static bool vdrip9958_reset(VideoDevice *device, VideoDeviceResult *result)
     impl->indirect_writes = 0;
     impl->status_reads = 0;
     impl->data_reads = 0;
+    impl->display_offset = 0;
 
     result->accepted = true;
     result->framebuffer_dirty = true;
@@ -335,4 +493,156 @@ VideoDevice *video_device_vdrip9958_create(void)
     device->info.allows_proxy_cursor_overlay = false;
 
     return device;
+}
+
+bool video_device_vdrip9958_stream_op(
+    VideoDevice *device, uint8_t opcode, const uint8_t *operands,
+    uint16_t operand_size, StreamState *state)
+{
+    if (device == NULL || state == NULL ||
+        strcmp(device->info.name, "vdrip9958") != 0) {
+        return false;
+    }
+    Vdrip9958Device *impl = vdrip9958_impl(device);
+
+    switch (opcode) {
+    case OP_DATA_WRITE:
+        if (operand_size != 1) return false;
+        vDrip9958WriteData(impl->vdp, operands[0]);
+        return true;
+    case OP_CTRL_WRITE:
+        if (operand_size != 1) return false;
+        vDrip9958WriteControl(impl->vdp, operands[0]);
+        return true;
+    case OP_PALETTE_WRITE:
+        if (operand_size != 1) return false;
+        vDrip9958WritePalette(impl->vdp, operands[0]);
+        return true;
+    case OP_INDIRECT_WRITE:
+        if (operand_size != 1) return false;
+        vDrip9958WriteRegisterIndirect(impl->vdp, operands[0]);
+        return true;
+    case OP_REG_BLOCK: {
+        if (operand_size < 2 || operands[1] != operand_size - 2 ||
+            (uint16_t)operands[0] + operands[1] > 64) return false;
+        for (uint8_t i = 0; i < operands[1]; ++i) {
+            write_register(impl, (uint8_t)(operands[0] + i), operands[2 + i]);
+        }
+        step_non_cpu_command(impl);
+        return true;
+    }
+    case OP_VRAM_ADDR_WRITE: {
+        if (operand_size < 4 || operands[3] != operand_size - 4) return false;
+        uint32_t address = (uint32_t)operands[0] |
+                           ((uint32_t)operands[1] << 8) |
+                           ((uint32_t)operands[2] << 16);
+        if (address + operands[3] > VDRIP9958_VRAM_SIZE) return false;
+        write_vram_block(impl, address, &operands[4], operands[3]);
+        state->vram_address = address + operands[3];
+        state->vram_addr_pending = false;
+        return true;
+    }
+    case OP_VRAM_SEQ_WRITE: {
+        if (operand_size < 2) return false;
+        uint16_t count = (uint16_t)operands[0] | ((uint16_t)operands[1] << 8);
+        if (count != operand_size - 2 ||
+            state->vram_address + count > VDRIP9958_VRAM_SIZE) return false;
+        write_vram_block(impl, state->vram_address, &operands[2], count);
+        state->vram_address += count;
+        state->vram_addr_pending = false;
+        return true;
+    }
+    case OP_COMMAND_SETUP:
+        if (operand_size != 15) return false;
+        for (uint8_t reg = 32; reg <= 46; ++reg) {
+            write_register(impl, reg, operands[reg - 32]);
+        }
+        step_non_cpu_command(impl);
+        return true;
+    case OP_TEXT_RUN: {
+        if (!stream_ready(impl, state) || operand_size < 4) return false;
+        uint8_t flags = operands[0];
+        uint8_t col = operands[1];
+        uint8_t row = operands[2];
+        uint16_t index = 3;
+        uint8_t fg = state->foreground;
+        uint8_t bg = state->background;
+        bool reverse = state->reverse;
+        if (flags & 1u) {
+            if (operand_size < 7) return false;
+            fg = operands[index++] & 0x0F;
+            bg = operands[index++] & 0x0F;
+            reverse = (operands[index++] & 1u) != 0;
+        }
+        uint8_t count = operands[index++];
+        if (index + count != operand_size || row >= TEXT_ROWS ||
+            (uint16_t)col + count > TEXT_COLS) return false;
+        for (uint8_t i = 0; i < count; ++i) {
+            uint8_t cell[CELL_BYTES] = {
+                operands[index + i], fg,
+                (uint8_t)(bg | (reverse ? 0x80u : 0u))
+            };
+            write_cell(impl, state, (uint8_t)(col + i), row, cell);
+            render_cell(impl, state, (uint8_t)(col + i), row, cell);
+        }
+        return true;
+    }
+    case OP_CELL_FILL:
+        if (!stream_ready(impl, state) || operand_size != 5 ||
+            !valid_rect(operands[0], operands[1], operands[2], operands[3])) return false;
+        fill_cells(impl, state, operands[0], operands[1], operands[2], operands[3], operands[4]);
+        return true;
+    case OP_CELL_COPY:
+        if (!stream_ready(impl, state) || operand_size != 6 ||
+            !valid_rect(operands[0], operands[1], operands[4], operands[5]) ||
+            !valid_rect(operands[2], operands[3], operands[4], operands[5])) return false;
+        copy_cells(impl, state, operands[0], operands[1], operands[2], operands[3],
+                   operands[4], operands[5]);
+        return true;
+    case OP_INSERT_LINES: {
+        if (!stream_ready(impl, state) || operand_size != 4) return false;
+        uint8_t row = operands[0], count = operands[1], top = operands[2], bottom = operands[3];
+        if (top > row || row > bottom || bottom >= TEXT_ROWS || count == 0) return false;
+        uint8_t available = (uint8_t)(bottom - row + 1);
+        if (count > available) count = available;
+        return scroll_region(impl, state, row, bottom, (int8_t)-count);
+    }
+    case OP_DELETE_LINES: {
+        if (!stream_ready(impl, state) || operand_size != 4) return false;
+        uint8_t row = operands[0], count = operands[1], top = operands[2], bottom = operands[3];
+        if (top > row || row > bottom || bottom >= TEXT_ROWS || count == 0) return false;
+        uint8_t available = (uint8_t)(bottom - row + 1);
+        if (count > available) count = available;
+        return scroll_region(impl, state, row, bottom, (int8_t)count);
+    }
+    case OP_ERASE_EOL:
+        if (!stream_ready(impl, state) || operand_size != 2 ||
+            operands[0] >= TEXT_COLS || operands[1] >= TEXT_ROWS) return false;
+        fill_cells(impl, state, operands[0], operands[1],
+                   (uint8_t)(TEXT_COLS - operands[0]), 1, 0x20);
+        return true;
+    case OP_CLEAR_SCREEN:
+        if (!stream_ready(impl, state) || operand_size != 0) return false;
+        /* The terminal occupies source lines 8..199. Clear the complete
+         * 212-line G6 page as well so the top/bottom margins cannot expose
+         * uninitialised VRAM. */
+        fill_vram(
+            impl, VDRIP9958_BITMAP_BASE,
+            (uint8_t)((state->background & 0x0Fu) * 0x11u),
+            VDRIP9958_G6_PITCH * 212u);
+        fill_cells(impl, state, 0, 0, TEXT_COLS, TEXT_ROWS, 0x20);
+        return true;
+    case OP_SCROLL_REGION:
+        if (!stream_ready(impl, state) || operand_size != 3) return false;
+        return scroll_region(impl, state, operands[0], operands[1], (int8_t)operands[2]);
+    case OP_SCROLL_UP:
+        if (!stream_ready(impl, state) || operand_size != 1 || operands[0] == 0) return false;
+        return scroll_region(impl, state, 0, TEXT_ROWS - 1, (int8_t)operands[0]);
+    case OP_SET_DISP_OFFSET:
+        if (operand_size != 1 || (operands[0] & 7u) != 0) return false;
+        impl->display_offset = operands[0];
+        return true;
+    default:
+        return true;
+    }
 }

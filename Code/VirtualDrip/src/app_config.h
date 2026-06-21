@@ -12,7 +12,7 @@
 #include <stdbool.h>
 
 #define DEFAULT_VNC_PORT 5900
-#define DEFAULT_VIDEO_BACKEND "tms9928"
+#define DEFAULT_VIDEO_BACKEND "vdrip9958"
 #define DEFAULT_DISK_A_PATH "zephyr_a.img"
 
 /** Packet input source selected at startup. */
@@ -53,7 +53,7 @@ typedef struct {
     bool console_pty;
     /** Proxy->Z80 keyboard input is raw terminal bytes. */
     bool raw_terminal_input;
-    /** Video backend selector. Currently only "tms9928" is accepted. */
+    /** Video backend selector. The production backend is permanently V9958. */
     const char *video_backend;
     /** Run built-in protocol smoke tests and exit. */
     bool run_tests;

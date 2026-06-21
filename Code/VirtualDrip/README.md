@@ -9,13 +9,9 @@ Instead of driving a physical VDP, Zephyr streams VDP operations over a serial
 link to a modern PC. A proxy application reconstructs the VDP state, renders
 video output, and serves it through a standard VNC client.
 
-Three video backends are selectable at runtime:
-
-| Backend | Chip | Native Size | Canvas |
-|---|---|---|---|
-| `tms9928` | TMS9918A/9928A | 256×192 | 256×192 |
-| `vdrip9928` | Enhanced TMS9918 + Text 2 | 256×192 | 256×192 |
-| `vdrip9958` | Yamaha V9958 | 256–512 × 192–424 | 512×424 |
+The production backend is permanently `vdrip9958`, with native Yamaha V9958
+output centered in a fixed 512x424 canvas. Former TMS9928 runtime backends are
+no longer built or selectable.
 
 The standalone `vDrip9958` library emulates the full Yamaha V9958: 128 KiB
 VRAM, four CPU-visible ports, 10 display modes, programmable palette, sprite

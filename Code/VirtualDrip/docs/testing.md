@@ -63,7 +63,7 @@ python3 tools/serial_replay.py --dry-run tests/packets/v9958_g6_interlace.bin
 
 - VNC check: run proxy with a V9958 fixture, connect VNC client, verify
   visible output
-- Backend selection: `--video-backend tms9928|vdrip9928|vdrip9958`
+- Backend selection: `--video-backend vdrip9958`
 - Legacy fixture replay with new frame format
 
 ---

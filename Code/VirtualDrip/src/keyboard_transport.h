@@ -65,6 +65,10 @@ bool keyboard_transport_enqueue(
 void keyboard_transport_note_keyboard_event(KeyboardTransport *transport);
 void keyboard_transport_note_unsupported_key(KeyboardTransport *transport);
 void keyboard_transport_note_incoming_packet(KeyboardTransport *transport, const Packet *packet);
+/* Release the VDP-busy keyboard gate when a presentation (OP_PRESENT) completes.
+ * Mirrors the FRAME_MARK gate release but does not touch storage state or any
+ * retained accelerator/stream state. */
+void keyboard_transport_note_present(KeyboardTransport *transport);
 void keyboard_transport_set_storage_active(KeyboardTransport *transport, bool active);
 void keyboard_transport_get_stats(KeyboardTransport *transport, KeyboardTransportStats *stats);
 

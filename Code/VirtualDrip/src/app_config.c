@@ -20,7 +20,7 @@ void print_usage(const char *program_name)
     fprintf(stderr, "  --disk-a: drive A disk image path, default %s\n", DEFAULT_DISK_A_PATH);
     fprintf(stderr, "  --vnc-port: VNC TCP port, default %d\n", DEFAULT_VNC_PORT);
     fprintf(stderr, "  --no-vnc, --headless: disable VNC output\n");
-    fprintf(stderr, "  --video-backend: video backend, default %s (available: tms9928, vdrip9928, vdrip9958)\n", DEFAULT_VIDEO_BACKEND);
+    fprintf(stderr, "  --video-backend: video backend, default and only value: %s\n", DEFAULT_VIDEO_BACKEND);
     fprintf(stderr, "  --log-keys: log RFB key events, mappings, and raw serial terminal input bytes\n");
     fprintf(stderr, "  --log-storage: log storage request/reply summaries\n");
     fprintf(stderr, "  --log-packets: log decoded non-storage packets\n");

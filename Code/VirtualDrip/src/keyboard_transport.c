@@ -448,6 +448,26 @@ void keyboard_transport_note_unsupported_key(KeyboardTransport *transport)
     pthread_mutex_unlock(&transport->queue.mutex);
 }
 
+void keyboard_transport_note_present(KeyboardTransport *transport)
+{
+    if (transport == NULL) {
+        return;
+    }
+
+    pthread_mutex_lock(&transport->gate.mutex);
+    /* OP_PRESENT marks the end of a VDP burst. Release the VDP-busy hold so
+     * keyboard (and any traffic waiting behind it) resumes immediately instead
+     * of waiting out the idle timeout. Storage state and the retained
+     * accelerator/stream state are intentionally left untouched. */
+    if (transport->gate.mode == TRANSPORT_VDP_BUSY) {
+        transport->gate.mode = TRANSPORT_INTERACTIVE;
+        pthread_cond_broadcast(&transport->gate.cond);
+    }
+    pthread_mutex_unlock(&transport->gate.mutex);
+
+    keyboard_transport_maybe_log_stats(transport);
+}
+
 void keyboard_transport_set_storage_active(KeyboardTransport *transport, bool active)
 {
     if (transport == NULL) {

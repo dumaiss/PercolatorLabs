@@ -465,6 +465,9 @@ static void render_sprites(const VDrip9958* vdp, const Descriptor* d,
   int size   = si ? 16 : 8;
   int sentinel = (d->baseHeight == 212) ? 216 : 208;
   int accepted = 0;
+  int horizontalScale =
+    (d->mode == VDRIP9958_MODE_GRAPHIC5 ||
+     d->mode == VDRIP9958_MODE_GRAPHIC6) ? 2 : 1;
   int s;
 
   /* Per-pixel sprite occupancy for collision detection. */
@@ -514,7 +517,8 @@ static void render_sprites(const VDrip9958* vdp, const Descriptor* d,
     }
     color = colByte & 0x0F;
     ec    = (colByte & 0x80) != 0;    /* early clock: shift left 32 */
-    if (ec) spx -= 32;
+    spx *= horizontalScale;
+    if (ec) spx -= 32 * horizontalScale;
 
     if (si) patBase = d->spritePatternBase + (uint32_t)(pattern & 0xFC) * 8u;
     else    patBase = d->spritePatternBase + (uint32_t)pattern * 8u;
@@ -529,7 +533,7 @@ static void render_sprites(const VDrip9958* vdp, const Descriptor* d,
         uint8_t bits = vdrip9958_vram_read(vdp,
                           (uint32_t)patBase + (uint32_t)line + (uint32_t)patByte);
         int set = (bits >> (7 - bitcol)) & 1;
-        int reps = mag ? 2 : 1;
+        int reps = (mag ? 2 : 1) * horizontalScale;
         int rep;
         if (!set || color == 0) continue;
         for (rep = 0; rep < reps; ++rep)

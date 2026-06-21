@@ -27,8 +27,6 @@ int test_protocol(void);
 #include "serial_reader.h"
 #include "storage_backend.h"
 #include "video_device.h"
-#include "video_device_tms9928.h"
-#include "video_device_vdrip9928.h"
 #include "video_device_vdrip9958.h"
 
 #include <pthread.h>
@@ -39,22 +37,14 @@ int test_protocol(void);
 
 static pthread_mutex_t framebuffer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static const uint8_t RAW_TERMINAL_READY[] = { 0x1B, 0x5B, 0x3F, 0x31, 0x3B, 0x30, 0x63 };
-
 /* Backend selection stays centralized until additional concrete backends exist. */
 static VideoDevice *create_video_backend(const char *backend_name)
 {
-    if (strcmp(backend_name, "tms9928") == 0) {
-        return video_device_tms9928_create();
-    }
-    if (strcmp(backend_name, "vdrip9928") == 0) {
-        return video_device_vdrip9928_create();
-    }
     if (strcmp(backend_name, "vdrip9958") == 0) {
         return video_device_vdrip9958_create();
     }
 
-    fprintf(stderr, "Unsupported video backend: %s. Available: tms9928, vdrip9928, vdrip9958\n", backend_name);
+    fprintf(stderr, "Unsupported video backend: %s. Available: vdrip9958\n", backend_name);
     return NULL;
 }
 
@@ -198,20 +188,8 @@ int main(int argc, char **argv)
          * Signal to the Z80 only after the serial reader is active, so the
          * first framed storage/display packet cannot beat the proxy RX path.
          */
-        if (config.console_pty) {
-            bool ready_sent = serial_port_send_packet(serial_port, PACKET_PROXY_READY, NULL, 0);
-            fprintf(stderr,
-                "Sent packetized proxy readiness: PROXY_READY (%s)\n",
-                ready_sent ? "ok" : "failed");
-        } else {
-            bool ready_sent = serial_port_send_raw(
-                serial_port,
-                RAW_TERMINAL_READY,
-                sizeof(RAW_TERMINAL_READY));
-            fprintf(stderr,
-                "Sent raw terminal readiness: ESC[?1;0c (%s)\n",
-                ready_sent ? "ok" : "failed");
-        }
+        bool ready_sent = serial_port_send_packet(serial_port, PACKET_PROXY_READY, NULL, 0);
+        fprintf(stderr, "Sent packetized proxy readiness: PROXY_READY (%s)\n", ready_sent ? "ok" : "failed");
     }
 
     int server_status = 0;

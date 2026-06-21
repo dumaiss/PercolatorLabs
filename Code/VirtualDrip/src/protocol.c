@@ -1,4 +1,5 @@
 #include "protocol.h"
+#include "video_device_vdrip9958.h"
 
 #include <string.h>
 
@@ -189,7 +190,6 @@ bool stream_decode(
     StreamResult *result,
     void *device)
 {
-    (void)device;
     memset(result, 0, sizeof(*result));
     result->accepted = true;
 
@@ -221,17 +221,14 @@ bool stream_decode(
                 operand_size = 2 + read_u16_le(&payload[pos]);
                 break;
             case OP_TEXT_RUN: {
-                if (pos >= length) goto truncated;
-                uint8_t flags = payload[pos++];
-                operand_size = 1; /* consumed flags byte */
-                if (flags & 0x01) {
-                    operand_size += 3; /* attr override */
+                if (pos + 3 > length) goto truncated;
+                uint16_t count_index = (uint16_t)(pos + 3);
+                if (payload[pos] & 0x01) {
+                    count_index = (uint16_t)(count_index + 3);
                 }
-                if (pos + operand_size >= length) goto truncated;
-                uint8_t count = payload[pos + operand_size];
-                operand_size += 3; /* col, row, count */
-                operand_size += count; /* chars */
-                pos--; /* back up: the +1 for flags was already consumed */
+                if (count_index >= length) goto truncated;
+                operand_size = (uint16_t)(
+                    (count_index - pos) + 1u + payload[count_index]);
                 break;
             }
             case OP_UPLOAD_DATA:
@@ -252,22 +249,38 @@ bool stream_decode(
         const uint8_t *operands = &payload[pos];
         pos += operand_size;
 
-        /* --- Execute opcode --- */
+        /* Execute the operation against the selected V9958 device first.
+         * Unit tests pass NULL and exercise decoder/state behavior only. */
+        bool device_ok = true;
+        if (device != NULL) {
+            device_ok = video_device_vdrip9958_stream_op(
+                (VideoDevice *)device, opcode, operands, operand_size, state);
+        }
+
+        /* --- Update retained decoder state/result --- */
         switch (opcode) {
         case OP_DATA_WRITE:
         case OP_CTRL_WRITE:
         case OP_PALETTE_WRITE:
         case OP_INDIRECT_WRITE:
-            result->framebuffer_dirty = true;
-            result->ops_executed++;
+            if (device_ok) {
+                result->framebuffer_dirty = true;
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
             break;
 
         case OP_REG_BLOCK:
         case OP_VRAM_ADDR_WRITE:
         case OP_VRAM_SEQ_WRITE:
         case OP_COMMAND_SETUP:
-            result->framebuffer_dirty = true;
-            result->ops_executed++;
+            if (device_ok) {
+                result->framebuffer_dirty = true;
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
             break;
 
         case OP_TEXT_RUN:
@@ -279,8 +292,12 @@ bool stream_decode(
         case OP_CLEAR_SCREEN:
         case OP_SCROLL_REGION:
         case OP_SCROLL_UP:
-            result->framebuffer_dirty = true;
-            result->ops_executed++;
+            if (device_ok) {
+                result->framebuffer_dirty = true;
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
             break;
 
         case OP_SET_CURSOR:
@@ -326,9 +343,13 @@ bool stream_decode(
             break;
 
         case OP_SET_DISP_OFFSET:
-            state->display_offset = operands[0];
-            result->framebuffer_dirty = true;
-            result->ops_executed++;
+            if ((operands[0] & 0x07) == 0 && device_ok) {
+                state->display_offset = operands[0];
+                result->framebuffer_dirty = true;
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
             break;
 
         case OP_UPLOAD_BEGIN:
@@ -361,6 +382,31 @@ bool stream_decode(
                 /* exact duplicate: idempotent */
             } else if (offset == upload->next_offset) {
                 memcpy(upload->shadow + offset, data, data_len);
+                if (device != NULL) {
+                    uint8_t address_write[4 + UINT8_MAX];
+                    uint32_t address = upload->base_address + offset;
+                    uint16_t copied = 0;
+                    while (copied < data_len) {
+                        uint8_t chunk = (uint8_t)((data_len - copied) > UINT8_MAX
+                            ? UINT8_MAX : (data_len - copied));
+                        address_write[0] = (uint8_t)address;
+                        address_write[1] = (uint8_t)(address >> 8);
+                        address_write[2] = (uint8_t)(address >> 16);
+                        address_write[3] = chunk;
+                        memcpy(&address_write[4], data + copied, chunk);
+                        if (!video_device_vdrip9958_stream_op(
+                                (VideoDevice *)device, OP_VRAM_ADDR_WRITE,
+                                address_write, (uint16_t)(4 + chunk), state)) {
+                            result->ops_skipped++;
+                            break;
+                        }
+                        copied = (uint16_t)(copied + chunk);
+                        address += chunk;
+                    }
+                    if (copied != data_len) {
+                        break;
+                    }
+                }
                 upload->next_offset = offset + data_len;
             } else {
                 break; /* gap or spanning → reject */
