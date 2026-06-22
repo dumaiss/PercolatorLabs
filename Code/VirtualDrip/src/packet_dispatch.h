@@ -22,8 +22,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** Display-layer callback invoked after the framebuffer is rerendered. */
-typedef void (*FrameChangedCallback)(void *userdata);
+/**
+ * Display-layer callback invoked after a framebuffer rectangle is rerendered.
+ *
+ * The display publishes the just-rendered buffer (e.g. by swapping it in as the
+ * VNC front buffer and marking the rectangle modified) and returns the buffer
+ * the dispatcher should render into next. Returning @p rendered means "no swap"
+ * (single-buffered). Called with the framebuffer mutex held.
+ */
+typedef uint32_t *(*FramePresentCallback)(
+    void *userdata, uint32_t *rendered, int x, int y, int width, int height);
 
 /** Dispatch context; borrows the video device, framebuffer, and mutex. */
 typedef struct {
@@ -32,8 +40,8 @@ typedef struct {
     int framebuffer_width;
     int framebuffer_height;
     pthread_mutex_t *framebuffer_mutex;
-    FrameChangedCallback frame_changed;
-    void *frame_changed_userdata;
+    FramePresentCallback present;
+    void *present_userdata;
     KeyboardTransport *keyboard_transport;
     PtyConsole *pty_console;
     SerialPort *serial_port;
@@ -44,6 +52,12 @@ typedef struct {
     size_t packet_count;
     StreamState stream_state;
     UploadState upload_state;
+    bool pending_dirty;
+    bool pending_dirty_full;
+    int pending_dirty_x;
+    int pending_dirty_y;
+    int pending_dirty_w;
+    int pending_dirty_h;
 } PacketDispatch;
 
 /** Initialize dispatch with a backend and host-owned framebuffer. */
@@ -55,11 +69,15 @@ void packet_dispatch_init(
     int framebuffer_height,
     pthread_mutex_t *framebuffer_mutex);
 
-/** Register an optional callback for display dirty notification. */
-void packet_dispatch_set_frame_changed_callback(
+/** Register the display present callback that publishes rendered frames. */
+void packet_dispatch_set_present_callback(
     PacketDispatch *dispatch,
-    FrameChangedCallback callback,
+    FramePresentCallback callback,
     void *userdata);
+
+/** Override the buffer the dispatcher renders into (the back buffer). */
+void packet_dispatch_set_render_framebuffer(
+    PacketDispatch *dispatch, uint32_t *framebuffer);
 
 /** Register optional keyboard transport gate updates for incoming serial packets. */
 void packet_dispatch_set_keyboard_transport(PacketDispatch *dispatch, KeyboardTransport *keyboard_transport);

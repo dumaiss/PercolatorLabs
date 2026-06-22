@@ -403,13 +403,13 @@ static bool vdrip9958_render_framebuffer(VideoDevice *device,
     Vdrip9958Device *impl = vdrip9958_impl(device);
     VDrip9958DisplayInfo info = vDrip9958GetDisplayInfo(impl->vdp);
 
-    /* Clear entire canvas */
-    size_t pixel_count = (size_t)width * (size_t)height;
-    for (size_t i = 0; i < pixel_count; ++i) {
-        framebuffer[i] = VDRIP9958_CLEAR_COLOR;
-    }
-
     if (info.mode == VDRIP9958_MODE_INVALID) {
+        /* No active output: the whole canvas is border. Writing the final
+         * value (black) directly is harmless even if a reader races us. */
+        size_t pixel_count = (size_t)width * (size_t)height;
+        for (size_t i = 0; i < pixel_count; ++i) {
+            framebuffer[i] = VDRIP9958_CLEAR_COLOR;
+        }
         return true;
     }
 
@@ -420,6 +420,31 @@ static bool vdrip9958_render_framebuffer(VideoDevice *device,
     /* Clamp offsets to canvas */
     if (offset_x < 0) offset_x = 0;
     if (offset_y < 0) offset_y = 0;
+
+    int active_w = (int)info.width;
+    int active_h = (int)info.height;
+    if (offset_x + active_w > width)  active_w = width  - offset_x;
+    if (offset_y + active_h > height) active_h = height - offset_y;
+
+    /*
+     * Clear only the border margins, never the active area. The framebuffer is
+     * shared live with the VNC server; blanking the active region before
+     * redrawing it would let a concurrent reader capture black pixels (the
+     * cause of the "black box" artifacts). The scanline renderer fully
+     * overwrites every active pixel, so the active area never needs clearing.
+     */
+    for (int y = 0; y < height; ++y) {
+        uint32_t *row = &framebuffer[(size_t)y * width];
+        if (y < offset_y || y >= offset_y + active_h) {
+            /* Margin row: clear the whole line. */
+            for (int x = 0; x < width; ++x) row[x] = VDRIP9958_CLEAR_COLOR;
+        } else {
+            /* Active row: clear only the left/right margins. */
+            for (int x = 0; x < offset_x; ++x) row[x] = VDRIP9958_CLEAR_COLOR;
+            for (int x = offset_x + active_w; x < width; ++x)
+                row[x] = VDRIP9958_CLEAR_COLOR;
+        }
+    }
 
     for (uint16_t y = 0; y < info.height; ++y) {
         uint32_t *line = &framebuffer[(offset_y + y) * width + offset_x];

@@ -106,6 +106,19 @@ void display_libvncserver_mark_dirty(DisplayLibVncServer *display, int x1, int y
 /** Convenience callback-compatible helper that marks the whole framebuffer dirty. */
 void display_libvncserver_mark_full_dirty(void *userdata);
 
+/** Callback-compatible helper that marks one x/y/width/height rectangle dirty. */
+void display_libvncserver_mark_region_dirty(
+    void *userdata, int x, int y, int width, int height);
+
+/**
+ * FramePresentCallback implementation: publish @p rendered as the new VNC front
+ * buffer (atomic pointer swap), mark the rectangle modified, and return the
+ * previous front buffer for the caller to render into next. The buffer is never
+ * cleared to black mid-render, so a concurrent VNC read never captures black.
+ */
+uint32_t *display_libvncserver_present(
+    void *userdata, uint32_t *rendered, int x, int y, int width, int height);
+
 /** Return whether LibVNCServer still considers the screen active. */
 bool display_libvncserver_is_active(const DisplayLibVncServer *display);
 

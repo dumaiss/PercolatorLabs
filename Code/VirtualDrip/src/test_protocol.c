@@ -232,11 +232,48 @@ static int test_stream_decode(void)
     assert(result.ops_skipped == 0);
     assert(result.presentation_requested);
     assert(result.framebuffer_dirty);
+    assert(result.dirty_full);
     assert(state.cursor_col == 10);
     assert(state.cursor_row == 5);
     assert(state.foreground == 15);
     assert(state.background == 0);
     assert(!state.reverse);
+
+    /* Semantic text writes report their exact 6x8-cell region on the doubled
+     * interlaced output canvas. */
+    uint8_t text_stream[] = {
+        OP_TEXT_RUN, 0, 2, 3, 4, 'T', 'E', 'S', 'T',
+        OP_PRESENT
+    };
+    stream_state_reset(&state);
+    state.display_offset = 8;
+    ok = stream_decode(
+        text_stream, sizeof(text_stream), &state, &upload, &result, NULL);
+    assert(ok);
+    assert(result.framebuffer_dirty);
+    assert(!result.dirty_full);
+    assert(result.dirty_x == 12);
+    assert(result.dirty_y == 64);
+    assert(result.dirty_w == 24);
+    assert(result.dirty_h == 16);
+
+    /* BIOS-style SAT writes dirty the old and new sprite rectangles instead
+     * of forcing a full-screen VNC update. */
+    uint8_t cursor_stream[] = {
+        OP_VRAM_ADDR_WRITE, 0x00, 0xF2, 0x01, 8,
+        7, 3, 0, 0, 0xD8, 0, 0, 0,
+        OP_PRESENT
+    };
+    stream_state_reset(&state);
+    ok = stream_decode(
+        cursor_stream, sizeof(cursor_stream), &state, &upload, &result, NULL);
+    assert(ok);
+    assert(result.framebuffer_dirty);
+    assert(!result.dirty_full);
+    assert(result.dirty_x == 6);
+    assert(result.dirty_y == 16);
+    assert(result.dirty_w == 16);
+    assert(result.dirty_h == 16);
 
     /* Unknown opcode stops stream */
     stream[0] = 0xAB;

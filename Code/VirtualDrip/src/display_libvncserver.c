@@ -129,6 +129,42 @@ void display_libvncserver_mark_full_dirty(void *userdata)
     display_libvncserver_mark_dirty(display, 0, 0, display->width, display->height);
 }
 
+void display_libvncserver_mark_region_dirty(
+    void *userdata, int x, int y, int width, int height)
+{
+    DisplayLibVncServer *display = (DisplayLibVncServer *)userdata;
+    if (display == NULL || width <= 0 || height <= 0) {
+        return;
+    }
+
+    display_libvncserver_mark_dirty(display, x, y, x + width, y + height);
+}
+
+uint32_t *display_libvncserver_present(
+    void *userdata, uint32_t *rendered, int x, int y, int width, int height)
+{
+    DisplayLibVncServer *display = (DisplayLibVncServer *)userdata;
+    if (display == NULL || display->screen == NULL) {
+        return rendered;
+    }
+
+    /*
+     * Swap the freshly rendered buffer in as the front buffer LibVNCServer
+     * serves from. The pointer write is atomic for the VNC reader thread, and
+     * the previous front buffer is handed back to become the next render
+     * target. The caller holds the framebuffer mutex, serializing this swap
+     * against any other renderer.
+     */
+    uint32_t *previous = (uint32_t *)display->screen->frameBuffer;
+    display->screen->frameBuffer = (char *)rendered;
+
+    if (width > 0 && height > 0) {
+        rfbMarkRectAsModified(display->screen, x, y, x + width, y + height);
+    }
+
+    return previous;
+}
+
 bool display_libvncserver_is_active(const DisplayLibVncServer *display)
 {
     if (display == NULL || display->screen == NULL) {

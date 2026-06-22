@@ -182,6 +182,164 @@ static uint16_t read_u16_le(const uint8_t *p)
     return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
 }
 
+#define STREAM_CANVAS_WIDTH 512
+#define STREAM_CANVAS_HEIGHT 424
+#define STREAM_CELL_WIDTH 6
+#define STREAM_CELL_HEIGHT 16
+#define STREAM_CURSOR_SAT_BASE 0x1F200u
+#define STREAM_CURSOR_HIDDEN_Y 0xD8u
+
+static void stream_dirty_add(
+    StreamResult *result, int x, int y, int width, int height)
+{
+    if (result->dirty_full || width <= 0 || height <= 0) {
+        return;
+    }
+
+    if (x < 0) {
+        width += x;
+        x = 0;
+    }
+    if (y < 0) {
+        height += y;
+        y = 0;
+    }
+    if (x + width > STREAM_CANVAS_WIDTH) {
+        width = STREAM_CANVAS_WIDTH - x;
+    }
+    if (y + height > STREAM_CANVAS_HEIGHT) {
+        height = STREAM_CANVAS_HEIGHT - y;
+    }
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    if (result->dirty_w <= 0 || result->dirty_h <= 0) {
+        result->dirty_x = x;
+        result->dirty_y = y;
+        result->dirty_w = width;
+        result->dirty_h = height;
+        return;
+    }
+
+    int x2 = result->dirty_x + result->dirty_w;
+    int y2 = result->dirty_y + result->dirty_h;
+    int new_x2 = x + width;
+    int new_y2 = y + height;
+    if (x < result->dirty_x) result->dirty_x = x;
+    if (y < result->dirty_y) result->dirty_y = y;
+    if (new_x2 > x2) x2 = new_x2;
+    if (new_y2 > y2) y2 = new_y2;
+    result->dirty_w = x2 - result->dirty_x;
+    result->dirty_h = y2 - result->dirty_y;
+}
+
+static void stream_dirty_full(StreamResult *result)
+{
+    result->framebuffer_dirty = true;
+    result->dirty_full = true;
+    result->dirty_x = 0;
+    result->dirty_y = 0;
+    result->dirty_w = STREAM_CANVAS_WIDTH;
+    result->dirty_h = STREAM_CANVAS_HEIGHT;
+}
+
+static void stream_dirty_cells(
+    StreamResult *result, const StreamState *state,
+    uint8_t col, uint8_t row, uint8_t width, uint8_t height)
+{
+    result->framebuffer_dirty = true;
+    stream_dirty_add(
+        result,
+        (int)col * STREAM_CELL_WIDTH,
+        ((int)state->display_offset + (int)row * 8) * 2,
+        (int)width * STREAM_CELL_WIDTH,
+        (int)height * STREAM_CELL_HEIGHT);
+}
+
+static void stream_dirty_cursor(
+    StreamResult *result, uint8_t x, uint8_t y)
+{
+    result->framebuffer_dirty = true;
+    stream_dirty_add(result, (int)x * 2, ((int)y + 1) * 2, 16, 16);
+}
+
+/*
+ * A raw VRAM write to the logical-cell buffer (screen_base) or the glyph
+ * atlas (glyph_base) is not visible damage by itself: the accelerator renders
+ * the displayed pixels from those staging regions, and the cell/accelerator
+ * ops report that visible destination separately. Only suppress when the
+ * whole write provably lands inside a configured staging region.
+ */
+static bool stream_vram_is_staging(
+    const StreamState *state, uint32_t address, uint32_t count)
+{
+    if (count == 0) {
+        return false;
+    }
+    uint32_t end = address + count; /* caller bounds count to VRAM size */
+
+    if (state->screen_configured) {
+        uint32_t base = state->screen_base;
+        uint32_t size = (uint32_t)TEXT_COLS * TEXT_ROWS * CELL_BYTES;
+        if (address >= base && end <= base + size) {
+            return true;
+        }
+    }
+
+    if (state->glyph_configured && state->atlas_configured &&
+        state->atlas_cols > 0) {
+        uint32_t base = state->glyph_base;
+        /* 256 glyphs across atlas_cols columns, GLYPH_HEIGHT scanlines per
+         * glyph row, 256 bytes per atlas scanline. */
+        uint32_t rows = (256u + state->atlas_cols - 1u) / state->atlas_cols;
+        uint32_t size = rows * (uint32_t)GLYPH_HEIGHT * 256u;
+        if (address >= base && end <= base + size) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void stream_dirty_vram_write(
+    StreamResult *result, StreamState *state,
+    const uint8_t *operands, uint16_t operand_size)
+{
+    if (operand_size < 4) {
+        stream_dirty_full(result);
+        return;
+    }
+
+    uint32_t address = read_u24_le(operands);
+    uint8_t count = operands[3];
+    if (address == STREAM_CURSOR_SAT_BASE && count >= 4 &&
+        operand_size >= (uint16_t)(4 + count)) {
+        if (state->sprite_cursor_known && state->sprite_cursor_visible) {
+            stream_dirty_cursor(
+                result, state->sprite_cursor_x, state->sprite_cursor_y);
+        }
+
+        uint8_t y = operands[4];
+        uint8_t x = operands[5];
+        bool visible = y != STREAM_CURSOR_HIDDEN_Y;
+        if (visible) {
+            stream_dirty_cursor(result, x, y);
+        }
+        state->sprite_cursor_known = true;
+        state->sprite_cursor_visible = visible;
+        state->sprite_cursor_x = x;
+        state->sprite_cursor_y = y;
+        return;
+    }
+
+    if (stream_vram_is_staging(state, address, count)) {
+        return; /* staging write: no visible damage by itself */
+    }
+
+    stream_dirty_full(result);
+}
+
 bool stream_decode(
     const uint8_t *payload,
     uint16_t length,
@@ -249,6 +407,10 @@ bool stream_decode(
         const uint8_t *operands = &payload[pos];
         pos += operand_size;
 
+        /* The device advances vram_address as a side effect, so capture the
+         * pre-write address for OP_VRAM_SEQ_WRITE dirty classification. */
+        uint32_t vram_addr_before = state->vram_address;
+
         /* Execute the operation against the selected V9958 device first.
          * Unit tests pass NULL and exercise decoder/state behavior only. */
         bool device_ok = true;
@@ -264,7 +426,7 @@ bool stream_decode(
         case OP_PALETTE_WRITE:
         case OP_INDIRECT_WRITE:
             if (device_ok) {
-                result->framebuffer_dirty = true;
+                stream_dirty_full(result);
                 result->ops_executed++;
             } else {
                 result->ops_skipped++;
@@ -272,28 +434,121 @@ bool stream_decode(
             break;
 
         case OP_REG_BLOCK:
-        case OP_VRAM_ADDR_WRITE:
-        case OP_VRAM_SEQ_WRITE:
         case OP_COMMAND_SETUP:
             if (device_ok) {
-                result->framebuffer_dirty = true;
+                stream_dirty_full(result);
                 result->ops_executed++;
             } else {
                 result->ops_skipped++;
             }
             break;
 
-        case OP_TEXT_RUN:
+        case OP_VRAM_SEQ_WRITE:
+            if (device_ok) {
+                uint16_t seq_count = read_u16_le(operands);
+                if (stream_vram_is_staging(
+                        state, vram_addr_before, seq_count)) {
+                    /* staging write: no visible damage by itself */
+                } else {
+                    stream_dirty_full(result);
+                }
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+
+        case OP_VRAM_ADDR_WRITE:
+            if (device_ok) {
+                stream_dirty_vram_write(result, state, operands, operand_size);
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+
+        case OP_TEXT_RUN: {
+            uint16_t count_index = 3;
+            if (operands[0] & 0x01) count_index += 3;
+            if (device_ok && count_index < operand_size) {
+                stream_dirty_cells(
+                    result, state, operands[1], operands[2],
+                    operands[count_index], 1);
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+        }
+
         case OP_CELL_FILL:
+            if (device_ok) {
+                stream_dirty_cells(
+                    result, state, operands[0], operands[1],
+                    operands[2], operands[3]);
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+
         case OP_CELL_COPY:
+            if (device_ok) {
+                stream_dirty_cells(
+                    result, state, operands[2], operands[3],
+                    operands[4], operands[5]);
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+
         case OP_INSERT_LINES:
         case OP_DELETE_LINES:
+            if (device_ok) {
+                stream_dirty_cells(
+                    result, state, 0, operands[0],
+                    TEXT_COLS, (uint8_t)(operands[3] - operands[0] + 1));
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+
         case OP_ERASE_EOL:
+            if (device_ok) {
+                stream_dirty_cells(
+                    result, state, operands[0], operands[1],
+                    (uint8_t)(TEXT_COLS - operands[0]), 1);
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+
         case OP_CLEAR_SCREEN:
+            if (device_ok) {
+                stream_dirty_full(result);
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+
         case OP_SCROLL_REGION:
+            if (device_ok) {
+                stream_dirty_cells(
+                    result, state, 0, operands[0], TEXT_COLS,
+                    (uint8_t)(operands[1] - operands[0] + 1));
+                result->ops_executed++;
+            } else {
+                result->ops_skipped++;
+            }
+            break;
+
         case OP_SCROLL_UP:
             if (device_ok) {
-                result->framebuffer_dirty = true;
+                stream_dirty_cells(result, state, 0, 0, TEXT_COLS, TEXT_ROWS);
                 result->ops_executed++;
             } else {
                 result->ops_skipped++;
@@ -325,27 +580,34 @@ bool stream_decode(
             break;
 
         case OP_SET_SCREEN_BASE:
+            /* Display-page change: re-points the logical cell buffer, so the
+             * whole screen must be re-interpreted. */
             state->screen_base = read_u24_le(operands);
             state->screen_configured = true;
+            stream_dirty_full(result);
             result->ops_executed++;
             break;
 
         case OP_SET_GLYPH_BASE:
+            /* Changes how every cell maps to pixels: full re-interpretation. */
             state->glyph_base = read_u24_le(operands);
             state->glyph_configured = true;
+            stream_dirty_full(result);
             result->ops_executed++;
             break;
 
         case OP_SET_ATLAS_CONFIG:
+            /* Atlas layout change re-interprets every glyph: full invalidate. */
             state->atlas_cols = operands[0];
             state->atlas_configured = true;
+            stream_dirty_full(result);
             result->ops_executed++;
             break;
 
         case OP_SET_DISP_OFFSET:
             if ((operands[0] & 0x07) == 0 && device_ok) {
                 state->display_offset = operands[0];
-                result->framebuffer_dirty = true;
+                stream_dirty_full(result);
                 result->ops_executed++;
             } else {
                 result->ops_skipped++;

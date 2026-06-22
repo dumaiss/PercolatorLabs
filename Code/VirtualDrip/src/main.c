@@ -194,6 +194,8 @@ int main(int argc, char **argv)
 
     int server_status = 0;
     DisplayLibVncServer *display = NULL;
+    /* Back buffer for double-buffered presentation; only allocated with VNC. */
+    uint32_t *back_framebuffer = NULL;
     if (!config.no_vnc) {
         display = display_libvncserver_create(
             argc,
@@ -219,7 +221,36 @@ int main(int argc, char **argv)
             return 1;
         }
 
-        packet_dispatch_set_frame_changed_callback(&dispatch, display_libvncserver_mark_full_dirty, display);
+        /*
+         * Double-buffer: the display serves `framebuffer` (which already holds
+         * the boot frame), while the dispatcher renders into a separate back
+         * buffer and swaps it in via display_libvncserver_present. The swap of
+         * the render target and enabling the callback happen under the mutex so
+         * the live serial reader thread can't render through a half-applied
+         * change.
+         */
+        back_framebuffer = calloc(
+            (size_t)video_device->info.width * (size_t)video_device->info.height,
+            sizeof(*back_framebuffer));
+        if (back_framebuffer == NULL) {
+            fprintf(stderr, "Failed to allocate back framebuffer\n");
+            app_runtime_request_stop();
+            serial_reader_join(serial_reader);
+            display_libvncserver_destroy(display);
+            pty_console_destroy(pty_console);
+            keyboard_transport_destroy(keyboard_transport);
+            serial_port_close(serial_port);
+            storage_backend_close(&storage_backend);
+            packet_dispatch_destroy(&dispatch);
+            free(framebuffer);
+            video_device_destroy(video_device);
+            return 1;
+        }
+        pthread_mutex_lock(&framebuffer_mutex);
+        packet_dispatch_set_render_framebuffer(&dispatch, back_framebuffer);
+        packet_dispatch_set_present_callback(
+            &dispatch, display_libvncserver_present, display);
+        pthread_mutex_unlock(&framebuffer_mutex);
         display_libvncserver_mark_full_dirty(display);
         printf("LibVNCServer display listening on port %d (%dx%d, 32-bit framebuffer)\n",
             config.vnc_port,
@@ -256,6 +287,7 @@ int main(int argc, char **argv)
     storage_backend_close(&storage_backend);
     packet_dispatch_destroy(&dispatch);
     free(framebuffer);
+    free(back_framebuffer);
     video_device_destroy(video_device);
     return server_status != 0 ? server_status : input_status;
 }

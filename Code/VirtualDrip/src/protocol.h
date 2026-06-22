@@ -218,6 +218,10 @@ typedef struct {
     uint32_t glyph_base;
     uint8_t  atlas_cols;
     uint8_t  display_offset;
+    bool     sprite_cursor_known;
+    bool     sprite_cursor_visible;
+    uint8_t  sprite_cursor_x;
+    uint8_t  sprite_cursor_y;
 } StreamState;
 
 void stream_state_reset(StreamState *state);
@@ -237,7 +241,12 @@ void upload_state_reset(UploadState *upload);
 typedef struct {
     bool     accepted;
     bool     framebuffer_dirty;
+    bool     dirty_full;
     bool     presentation_requested;
+    int      dirty_x;
+    int      dirty_y;
+    int      dirty_w;
+    int      dirty_h;
     uint16_t ops_executed;
     uint16_t ops_skipped;
 } StreamResult;
