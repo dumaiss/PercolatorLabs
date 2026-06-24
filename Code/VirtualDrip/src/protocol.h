@@ -195,8 +195,8 @@ typedef struct {
 const OpcodeDescriptor *stream_opcode_descriptor(uint8_t opcode);
 
 /* Text grid constants */
-#define TEXT_COLS          80
-#define TEXT_ROWS          24
+#define TEXT_COLS          85
+#define TEXT_ROWS          26
 #define GLYPH_WIDTH        6
 #define GLYPH_HEIGHT       8
 #define CELL_BYTES         3

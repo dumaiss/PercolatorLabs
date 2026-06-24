@@ -648,9 +648,9 @@ bool video_device_vdrip9958_stream_op(
         return true;
     case OP_CLEAR_SCREEN:
         if (!stream_ready(impl, state) || operand_size != 0) return false;
-        /* The terminal occupies source lines 8..199. Clear the complete
-         * 212-line G6 page as well so the top/bottom margins cannot expose
-         * uninitialised VRAM. */
+        /* The terminal occupies source lines 4..211 (26 rows x 8). Clear the
+         * complete 212-line G6 page as well so the top/bottom margins cannot
+         * expose uninitialised VRAM. */
         fill_vram(
             impl, VDRIP9958_BITMAP_BASE,
             (uint8_t)((state->background & 0x0Fu) * 0x11u),
@@ -664,7 +664,11 @@ bool video_device_vdrip9958_stream_op(
         if (!stream_ready(impl, state) || operand_size != 1 || operands[0] == 0) return false;
         return scroll_region(impl, state, 0, TEXT_ROWS - 1, (int8_t)operands[0]);
     case OP_SET_DISP_OFFSET:
-        if (operand_size != 1 || (operands[0] & 7u) != 0) return false;
+        /* Offset must be a multiple of 4 so the interlaced (x2) line mapping
+         * stays field-aligned. The render and dirty-rect math handle any such
+         * offset; 4 is needed to fit a 26-row (208-line) text area in the
+         * 212-line G6 page (rows occupy source lines 4..211). */
+        if (operand_size != 1 || (operands[0] & 3u) != 0) return false;
         impl->display_offset = operands[0];
         return true;
     default:
