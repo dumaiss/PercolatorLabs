@@ -9222,6 +9222,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "TLV2372IDR"
+			(at 485.14 125.73 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "5"
 			(uuid "4bdd8cd6-71fd-485d-94d9-897fbd68eba5")
 		)
@@ -10086,7 +10097,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RC0402FR-07100KL"
 			(at 580.39 66.04 90)
 			(hide yes)
 			(show_name no)
@@ -10169,6 +10180,17 @@
 			)
 		)
 		(property "Description" ""
+			(at 292.1 64.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "AD7801BRUZ"
 			(at 292.1 64.77 0)
 			(hide yes)
 			(show_name no)
@@ -10776,6 +10798,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "CD74HCT21M96"
+			(at 71.12 231.14 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "14"
 			(uuid "a2d3b9a7-78b5-48c1-9a49-088a6c2fb0f7")
 		)
@@ -10985,7 +11018,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RC0402FR-07100KL"
 			(at 450.85 175.26 90)
 			(hide yes)
 			(show_name no)
@@ -11289,7 +11322,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RC0402FR-07100KL"
 			(at 580.39 142.24 90)
 			(hide yes)
 			(show_name no)
@@ -11572,7 +11605,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0710KL"
+		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
 			(at 101.6 138.43 90)
 			(hide yes)
 			(show_name no)
@@ -11653,6 +11686,17 @@
 			)
 		)
 		(property "Description" "Dual 4-input AND"
+			(at 71.12 248.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CD74HCT21M96"
 			(at 71.12 248.92 0)
 			(hide yes)
 			(show_name no)
@@ -12544,6 +12588,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "TLV2372IDR"
+			(at 482.6 177.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "5"
 			(uuid "4bdd8cd6-71fd-485d-94d9-897fbd68eba6")
 		)
@@ -12634,6 +12689,17 @@
 			)
 		)
 		(property "Description" "Dual 4-input AND"
+			(at 40.64 252.73 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "CD74HCT21M96"
 			(at 40.64 252.73 0)
 			(hide yes)
 			(show_name no)
@@ -13309,7 +13375,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RMCF0603FT10R0"
+		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
 			(at 388.62 78.74 0)
 			(hide yes)
 			(show_name no)
@@ -13585,6 +13651,17 @@
 			)
 		)
 		(property "Description" "Dual Rail-to-Rail Input/Output Operational Amplifier, DIP-8/SOIC-8/VSSOP-8"
+			(at 483.87 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "TLV2372IDR"
 			(at 483.87 55.88 0)
 			(hide yes)
 			(show_name no)
@@ -13998,6 +14075,17 @@
 				(justify bottom)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "ECS-2100A-035"
+			(at 133.35 308.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "8"
 			(uuid "ddf9eb20-47a0-4bf7-8d16-94e575aa605b")
 		)
@@ -14220,7 +14308,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "CL10X106MO8NRNC"
+		(property "MANUFACTURER_PART_NUMBER" "C0603C104K5RACTU"
 			(at 546.1 139.7 90)
 			(hide yes)
 			(show_name no)
@@ -15239,7 +15327,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RMCF0603FT10R0"
+		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
 			(at 388.62 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -15757,7 +15845,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" ""
+		(property "MANUFACTURER_PART_NUMBER" "RC0402FR-07100KL"
 			(at 462.28 167.64 90)
 			(hide yes)
 			(show_name no)
@@ -16197,7 +16285,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "C0603C104K5RACTU"
+		(property "MANUFACTURER_PART_NUMBER" "CL10X106MO8NRNC"
 			(at 100.33 308.61 0)
 			(hide yes)
 			(show_name no)
@@ -16283,6 +16371,17 @@
 		)
 		(property "Description" ""
 			(at 541.02 128.27 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "LM4880MX/NOPB"
+			(at 541.02 128.27 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18027,7 +18126,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0710KL"
+		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
 			(at 217.17 134.62 90)
 			(hide yes)
 			(show_name no)
@@ -18141,7 +18240,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RMCF0603FT10R0"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0710KL"
 			(at 495.3 137.16 0)
 			(hide yes)
 			(show_name no)
@@ -18495,6 +18594,17 @@
 			)
 		)
 		(property "Description" "3-to-8 line decoder/multiplexer inverting, DIP-16/SOIC-16/SSOP-16"
+			(at 137.16 251.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "SN74HC138DR"
 			(at 137.16 251.46 0)
 			(hide yes)
 			(show_name no)
@@ -19130,7 +19240,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RMCF0603FT10R0"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0710KL"
 			(at 495.3 67.31 0)
 			(hide yes)
 			(show_name no)
