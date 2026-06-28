@@ -2408,6 +2408,14 @@
 		(uuid "36b3a727-2f74-4aeb-8fce-adb192127c99")
 	)
 	(no_connect
+		(at 107.95 176.53)
+		(uuid "3ad55c26-1b1a-4bc2-9326-c43d0bd26239")
+	)
+	(no_connect
+		(at 107.95 179.07)
+		(uuid "3ca667f2-2071-43b6-b51e-e9d8a08b9b91")
+	)
+	(no_connect
 		(at 107.95 130.81)
 		(uuid "3d6d0d74-fdf2-494e-9862-1485b276ea72")
 	)
@@ -2417,7 +2425,7 @@
 	)
 	(no_connect
 		(at 107.95 181.61)
-		(uuid "484e5d85-6996-4f3a-b517-c241857f7c41")
+		(uuid "4344a6ca-d3ce-4dce-a89d-60199b661503")
 	)
 	(no_connect
 		(at 133.35 146.05)
@@ -2428,20 +2436,8 @@
 		(uuid "4cc14f89-6895-4f9d-8a4d-84d143eb185e")
 	)
 	(no_connect
-		(at 107.95 184.15)
-		(uuid "4d8203a4-006c-4803-8050-a7d05e18cc29")
-	)
-	(no_connect
-		(at 107.95 186.69)
-		(uuid "58e66b67-fd42-4fc3-ab33-cb314307cfbb")
-	)
-	(no_connect
 		(at 107.95 199.39)
 		(uuid "5dfd65a0-8a87-4fa0-bcfa-8adcc53ebca5")
-	)
-	(no_connect
-		(at 107.95 171.45)
-		(uuid "5dfee927-a2f2-4537-a740-862fb4c2072a")
 	)
 	(no_connect
 		(at 133.35 209.55)
@@ -2450,10 +2446,6 @@
 	(no_connect
 		(at 133.35 158.75)
 		(uuid "67320118-eb0c-4be8-84fe-72cf56376eac")
-	)
-	(no_connect
-		(at 107.95 179.07)
-		(uuid "685ab130-9519-4062-a395-1a0704ffb542")
 	)
 	(no_connect
 		(at 107.95 140.97)
@@ -2512,6 +2504,10 @@
 		(uuid "9be20c46-ae1d-4c22-9bc6-0e1f039e5650")
 	)
 	(no_connect
+		(at 107.95 184.15)
+		(uuid "a7b8e47c-cac1-42d0-8c76-e3ee3cc673f0")
+	)
+	(no_connect
 		(at 107.95 156.21)
 		(uuid "a9478dc7-87a6-4e71-a743-7974bfd3ddf2")
 	)
@@ -2526,6 +2522,18 @@
 	(no_connect
 		(at 234.95 147.32)
 		(uuid "b5bf2c47-643e-4d0f-973d-4aaf3f8cf3fc")
+	)
+	(no_connect
+		(at 107.95 186.69)
+		(uuid "b6a998c7-ce53-4c20-befd-bfb8fdd2a0b0")
+	)
+	(no_connect
+		(at 107.95 189.23)
+		(uuid "b7a5c09d-457b-4e94-8c53-3dac542b98bf")
+	)
+	(no_connect
+		(at 107.95 171.45)
+		(uuid "bbb88dc3-7cb2-4a9d-ae7f-8f0dbaa7bb2e")
 	)
 	(no_connect
 		(at 107.95 204.47)
@@ -2548,24 +2556,12 @@
 		(uuid "c789af57-06cd-44dc-8de2-8ee65fa24673")
 	)
 	(no_connect
-		(at 107.95 173.99)
-		(uuid "c87f4288-b2d5-45a3-8f5e-41a0231fbdf9")
-	)
-	(no_connect
 		(at 133.35 214.63)
 		(uuid "ccf37505-efeb-4731-b583-0f402c5ac053")
 	)
 	(no_connect
 		(at 107.95 128.27)
 		(uuid "d07a0068-4977-413e-a455-1aa20d6cbed7")
-	)
-	(no_connect
-		(at 107.95 189.23)
-		(uuid "d8667cf5-cc0d-4c60-849e-390b725a3a04")
-	)
-	(no_connect
-		(at 107.95 176.53)
-		(uuid "da132d60-08de-40b0-8ce9-f282c1fdc786")
 	)
 	(no_connect
 		(at 267.97 154.94)
@@ -2586,6 +2582,10 @@
 	(no_connect
 		(at 107.95 219.71)
 		(uuid "e6371ab1-3312-4b16-88fa-89f6db7a9e22")
+	)
+	(no_connect
+		(at 107.95 173.99)
+		(uuid "eb7c7c32-b985-4ffc-b930-373d16fc1059")
 	)
 	(no_connect
 		(at 133.35 201.93)
@@ -4553,7 +4553,6 @@
 	(symbol
 		(lib_id "pBITz:pBITzBus")
 		(at 120.65 166.37 0)
-		(mirror y)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4583,7 +4582,7 @@
 			)
 		)
 		(property "Footprint" "Connector_PCBEdge:BUS_PCIexpress_x8"
-			(at 123.698 150.876 0)
+			(at 117.602 150.876 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4594,7 +4593,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.ritrontek.com/uploadfile/2016/1026/20161026105231124.pdf#page=63"
-			(at 117.602 210.312 0)
+			(at 123.698 210.312 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4605,7 +4604,7 @@
 			)
 		)
 		(property "Description" "pBITz backplane Connector"
-			(at 119.634 218.186 0)
+			(at 121.666 218.186 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
