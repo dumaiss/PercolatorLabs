@@ -329,16 +329,6 @@
 				(justify left)
 			)
 		)
-		(pin "D[0..7]" bidirectional
-			(at 152.4 91.44 270)
-			(uuid "cf4ffa18-c788-4576-a707-cf2a015dd92c")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
 		(pin "A1" output
 			(at 147.32 91.44 270)
 			(uuid "30449dda-c322-41ef-a716-f490e57648a9")
@@ -372,6 +362,16 @@
 		(pin "~{RESET}" output
 			(at 132.08 91.44 270)
 			(uuid "767b657d-4754-4899-9ad1-a3b5d491030a")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "DB[0..7]" bidirectional
+			(at 152.4 91.44 270)
+			(uuid "f9c441ea-7238-4986-9644-40d9aedf5cfd")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -485,9 +485,9 @@
 				(justify right)
 			)
 		)
-		(pin "D[0..7]" input
-			(at 152.4 102.87 90)
-			(uuid "1857e3f7-b635-4629-b535-4dc34b4a0012")
+		(pin "~{RESET}" input
+			(at 132.08 102.87 90)
+			(uuid "6744b5f3-3434-4b4f-90c9-686bf064a8f6")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -495,9 +495,9 @@
 				(justify right)
 			)
 		)
-		(pin "~{RESET}" input
-			(at 132.08 102.87 90)
-			(uuid "6744b5f3-3434-4b4f-90c9-686bf064a8f6")
+		(pin "DB[0..7]" bidirectional
+			(at 152.4 102.87 90)
+			(uuid "136c5372-9b90-4f7a-8978-414b53fd8e99")
 			(effects
 				(font
 					(size 1.27 1.27)

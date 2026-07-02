@@ -92,6 +92,10 @@
         [
           "courtyards_overlap|153414200|93102600|bb64409b-b273-4b7e-afe0-d21097bcf9c4|d3530e66-374b-47b5-b9cb-045f1899dd98",
           "By design, under the chip"
+        ],
+        [
+          "starved_thermal|211209300|71412600|673b32bd-b2f8-40a1-a023-71c4843f8c34|22dc723d-d6f4-49bc-bec5-46a95e47a40a|B.Cu",
+          ""
         ]
       ],
       "meta": {
@@ -754,7 +758,7 @@
         "uuid": "b6680a6e-90e3-40c9-86c3-54d4e29b0686"
       }
     ],
-    "used_designators": "C18-19",
+    "used_designators": "",
     "variants": []
   },
   "sheets": [
