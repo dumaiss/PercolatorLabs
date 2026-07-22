@@ -61,6 +61,8 @@ typedef struct {
 
 void virtual_text_cursor_init(VirtualTextCursor *cursor);
 void virtual_text_cursor_destroy(VirtualTextCursor *cursor);
+/** Restore cursor state to creation defaults without replacing its mutex. */
+void virtual_text_cursor_reset(VirtualTextCursor *cursor);
 
 /** Handle one PACKET_CURSOR_COMMAND payload. Returns true when accepted. */
 bool virtual_text_cursor_handle_command(

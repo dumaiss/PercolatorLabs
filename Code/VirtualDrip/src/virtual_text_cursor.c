@@ -55,6 +55,39 @@ void virtual_text_cursor_destroy(VirtualTextCursor *cursor)
     pthread_mutex_destroy(&cursor->mutex);
 }
 
+void virtual_text_cursor_reset(VirtualTextCursor *cursor)
+{
+    if (cursor == NULL) {
+        return;
+    }
+
+    pthread_mutex_lock(&cursor->mutex);
+    cursor->enabled = false;
+    cursor->visible = false;
+    cursor->blink_enabled = false;
+    cursor->col = 0;
+    cursor->row = 0;
+    cursor->max_cols = VIRTUAL_TEXT_CURSOR_DEFAULT_COLS;
+    cursor->max_rows = VIRTUAL_TEXT_CURSOR_DEFAULT_ROWS;
+    cursor->cell_width = VIRTUAL_TEXT_CURSOR_DEFAULT_CELL_WIDTH;
+    cursor->cell_height = VIRTUAL_TEXT_CURSOR_DEFAULT_CELL_HEIGHT;
+    cursor->style = CURSOR_STYLE_BLOCK;
+    cursor->color_rgba = 0xFFFF00FFu;
+    cursor->blink_interval_ms = VIRTUAL_TEXT_CURSOR_DEFAULT_BLINK_MS;
+    cursor->last_blink_ms = 0;
+    cursor->blink_phase_visible = true;
+    cursor->dirty = false;
+    cursor->old_col = 0;
+    cursor->old_row = 0;
+    cursor->cursor_commands_seen = 0;
+    cursor->cursor_commands_bad = 0;
+    cursor->cursor_show_count = 0;
+    cursor->cursor_hide_count = 0;
+    cursor->cursor_move_count = 0;
+    cursor->cursor_blink_toggle_count = 0;
+    pthread_mutex_unlock(&cursor->mutex);
+}
+
 bool virtual_text_cursor_handle_command(
     VirtualTextCursor *cursor,
     const uint8_t *payload,

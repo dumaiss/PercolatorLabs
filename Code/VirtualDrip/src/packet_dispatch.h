@@ -21,6 +21,7 @@
 #include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <time.h>
 
 /**
  * Display-layer callback invoked after a framebuffer rectangle is rerendered.
@@ -58,6 +59,14 @@ typedef struct {
     int pending_dirty_y;
     int pending_dirty_w;
     int pending_dirty_h;
+    pthread_mutex_t reset_mutex;
+    pthread_cond_t reset_cond;
+    pthread_t reset_thread;
+    struct timespec reset_deadline;
+    unsigned reset_generation;
+    bool reset_thread_started;
+    bool reset_pending;
+    bool reset_shutdown;
 } PacketDispatch;
 
 /** Initialize dispatch with a backend and host-owned framebuffer. */
@@ -103,6 +112,12 @@ void packet_dispatch_tick(PacketDispatch *dispatch);
 
 /** Release dispatch-owned resources. */
 void packet_dispatch_destroy(PacketDispatch *dispatch);
+
+/** Hold/reset proxy state after the configured serial device disappears. */
+void packet_dispatch_serial_disconnected(PacketDispatch *dispatch);
+
+/** Reset again and schedule delayed READY after the device is reopened. */
+void packet_dispatch_serial_reconnected(PacketDispatch *dispatch);
 
 /** PacketHandler implementation used by file replay and serial input. */
 void packet_dispatch_handle_packet(const Packet *packet, size_t offset, void *userdata);

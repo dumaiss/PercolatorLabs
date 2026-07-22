@@ -40,6 +40,7 @@ typedef struct {
     struct timespec last_vdp_activity;
     bool has_vdp_activity;
     bool storage_active;
+    bool reset_active;
     bool shutting_down;
 } TransportGate;
 
@@ -185,7 +186,12 @@ static bool transport_gate_wait_until_interactive(TransportGate *gate)
     bool counted_storage_hold = false;
 
     pthread_mutex_lock(&gate->mutex);
-    while ((gate->storage_active || gate->mode == TRANSPORT_VDP_BUSY) && !gate->shutting_down) {
+    while ((gate->reset_active || gate->storage_active || gate->mode == TRANSPORT_VDP_BUSY)
+           && !gate->shutting_down) {
+        if (gate->reset_active) {
+            pthread_cond_wait(&gate->cond, &gate->mutex);
+            continue;
+        }
         if (gate->storage_active) {
             if (!counted_storage_hold) {
                 gate->keyboard_held_storage_count++;
@@ -417,6 +423,13 @@ bool keyboard_transport_enqueue(
         return false;
     }
 
+    pthread_mutex_lock(&transport->gate.mutex);
+    bool reset_active = transport->gate.reset_active;
+    pthread_mutex_unlock(&transport->gate.mutex);
+    if (reset_active) {
+        return false;
+    }
+
     QueuedInput input;
     input.length = length;
     memcpy(input.bytes, bytes, length);
@@ -487,6 +500,39 @@ void keyboard_transport_set_storage_active(KeyboardTransport *transport, bool ac
     pthread_mutex_unlock(&transport->gate.mutex);
 
     keyboard_transport_maybe_log_stats(transport);
+}
+
+void keyboard_transport_reset_begin(KeyboardTransport *transport)
+{
+    if (transport == NULL) {
+        return;
+    }
+
+    pthread_mutex_lock(&transport->gate.mutex);
+    transport->gate.reset_active = true;
+    transport->gate.storage_active = false;
+    transport->gate.mode = TRANSPORT_INTERACTIVE;
+    transport->gate.has_vdp_activity = false;
+    pthread_cond_broadcast(&transport->gate.cond);
+    pthread_mutex_unlock(&transport->gate.mutex);
+
+    pthread_mutex_lock(&transport->queue.mutex);
+    transport->queue.head = 0;
+    transport->queue.tail = 0;
+    transport->queue.count = 0;
+    pthread_mutex_unlock(&transport->queue.mutex);
+}
+
+void keyboard_transport_reset_end(KeyboardTransport *transport)
+{
+    if (transport == NULL) {
+        return;
+    }
+
+    pthread_mutex_lock(&transport->gate.mutex);
+    transport->gate.reset_active = false;
+    pthread_cond_broadcast(&transport->gate.cond);
+    pthread_mutex_unlock(&transport->gate.mutex);
 }
 
 void keyboard_transport_note_incoming_packet(KeyboardTransport *transport, const Packet *packet)

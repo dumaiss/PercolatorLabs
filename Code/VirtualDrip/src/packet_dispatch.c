@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "packet_dispatch.h"
 
 #include "packet_replay.h"
@@ -5,6 +7,61 @@
 #include "storage_protocol.h"
 
 #include <stdio.h>
+#include <errno.h>
+#include <time.h>
+#include <string.h>
+
+#define PROXY_RESET_READY_DELAY_MS 2000L
+
+static struct timespec packet_dispatch_timespec_add_ms(
+    struct timespec value, long delay_ms)
+{
+    value.tv_sec += delay_ms / 1000L;
+    value.tv_nsec += (delay_ms % 1000L) * 1000000L;
+    if (value.tv_nsec >= 1000000000L) {
+        value.tv_sec++;
+        value.tv_nsec -= 1000000000L;
+    }
+    return value;
+}
+
+static void *packet_dispatch_reset_thread(void *userdata)
+{
+    PacketDispatch *dispatch = (PacketDispatch *)userdata;
+
+    pthread_mutex_lock(&dispatch->reset_mutex);
+    while (!dispatch->reset_shutdown) {
+        while (!dispatch->reset_pending && !dispatch->reset_shutdown) {
+            pthread_cond_wait(&dispatch->reset_cond, &dispatch->reset_mutex);
+        }
+        if (dispatch->reset_shutdown) {
+            break;
+        }
+
+        unsigned generation = dispatch->reset_generation;
+        struct timespec deadline = dispatch->reset_deadline;
+        int wait_status = pthread_cond_timedwait(
+            &dispatch->reset_cond, &dispatch->reset_mutex, &deadline);
+        if (dispatch->reset_shutdown) {
+            break;
+        }
+        if (wait_status != ETIMEDOUT
+            || generation != dispatch->reset_generation) {
+            continue;
+        }
+
+        dispatch->reset_pending = false;
+        bool sent = serial_port_send_packet(
+            dispatch->serial_port, PACKET_PROXY_READY, NULL, 0);
+        fprintf(stderr,
+            "Sent post-reset proxy readiness: PROXY_READY (%s)\n",
+            sent ? "ok" : "failed");
+        keyboard_transport_reset_end(dispatch->keyboard_transport);
+        pty_console_reset_end(dispatch->pty_console);
+    }
+    pthread_mutex_unlock(&dispatch->reset_mutex);
+    return NULL;
+}
 
 /*
  * PacketDispatch is the point where transport-neutral packets meet the selected
@@ -29,6 +86,7 @@ void packet_dispatch_init(
     int framebuffer_height,
     pthread_mutex_t *framebuffer_mutex)
 {
+    memset(dispatch, 0, sizeof(*dispatch));
     dispatch->video_device = video_device;
     dispatch->framebuffer = framebuffer;
     dispatch->framebuffer_width = framebuffer_width;
@@ -43,6 +101,8 @@ void packet_dispatch_init(
     dispatch->log_storage = false;
     dispatch->log_packets = false;
     virtual_text_cursor_init(&dispatch->cursor);
+    stream_state_reset(&dispatch->stream_state);
+    upload_state_reset(&dispatch->upload_state);
     dispatch->packet_count = 0;
     dispatch->pending_dirty = false;
     dispatch->pending_dirty_full = false;
@@ -50,6 +110,15 @@ void packet_dispatch_init(
     dispatch->pending_dirty_y = 0;
     dispatch->pending_dirty_w = 0;
     dispatch->pending_dirty_h = 0;
+    pthread_mutex_init(&dispatch->reset_mutex, NULL);
+    pthread_cond_init(&dispatch->reset_cond, NULL);
+    if (pthread_create(
+            &dispatch->reset_thread, NULL,
+            packet_dispatch_reset_thread, dispatch) == 0) {
+        dispatch->reset_thread_started = true;
+    } else {
+        fprintf(stderr, "Failed to start proxy reset coordinator\n");
+    }
 }
 
 void packet_dispatch_set_present_callback(
@@ -217,7 +286,109 @@ void packet_dispatch_destroy(PacketDispatch *dispatch)
         return;
     }
 
+    pthread_mutex_lock(&dispatch->reset_mutex);
+    dispatch->reset_shutdown = true;
+    pthread_cond_broadcast(&dispatch->reset_cond);
+    pthread_mutex_unlock(&dispatch->reset_mutex);
+    if (dispatch->reset_thread_started) {
+        pthread_join(dispatch->reset_thread, NULL);
+    }
+    pthread_cond_destroy(&dispatch->reset_cond);
+    pthread_mutex_destroy(&dispatch->reset_mutex);
     virtual_text_cursor_destroy(&dispatch->cursor);
+}
+
+static void packet_dispatch_schedule_ready(PacketDispatch *dispatch)
+{
+    if (dispatch->serial_port == NULL) {
+        return;
+    }
+
+    if (!dispatch->reset_thread_started) {
+        struct timespec delay = { .tv_sec = 2, .tv_nsec = 0 };
+        (void)nanosleep(&delay, NULL);
+        (void)serial_port_send_packet(
+            dispatch->serial_port, PACKET_PROXY_READY, NULL, 0);
+        keyboard_transport_reset_end(dispatch->keyboard_transport);
+        pty_console_reset_end(dispatch->pty_console);
+        return;
+    }
+
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    pthread_mutex_lock(&dispatch->reset_mutex);
+    dispatch->reset_generation++;
+    dispatch->reset_deadline = packet_dispatch_timespec_add_ms(
+        now, PROXY_RESET_READY_DELAY_MS);
+    dispatch->reset_pending = true;
+    pthread_cond_broadcast(&dispatch->reset_cond);
+    pthread_mutex_unlock(&dispatch->reset_mutex);
+}
+
+static void packet_dispatch_cancel_ready(PacketDispatch *dispatch)
+{
+    pthread_mutex_lock(&dispatch->reset_mutex);
+    dispatch->reset_generation++;
+    dispatch->reset_pending = false;
+    pthread_cond_broadcast(&dispatch->reset_cond);
+    pthread_mutex_unlock(&dispatch->reset_mutex);
+}
+
+static void packet_dispatch_reset_state(PacketDispatch *dispatch)
+{
+    VideoDeviceResult reset_result;
+    video_device_result_clear(&reset_result);
+
+    keyboard_transport_reset_begin(dispatch->keyboard_transport);
+    pty_console_reset_begin(dispatch->pty_console);
+    keyboard_transport_set_storage_active(dispatch->keyboard_transport, false);
+    pty_console_set_storage_active(dispatch->pty_console, false);
+    if (!storage_backend_flush(dispatch->storage_backend)) {
+        fprintf(stderr, "Failed to flush storage while resetting proxy\n");
+    }
+
+    (void)video_device_reset(dispatch->video_device, &reset_result);
+    virtual_text_cursor_reset(&dispatch->cursor);
+    stream_state_reset(&dispatch->stream_state);
+    upload_state_reset(&dispatch->upload_state);
+    dispatch->pending_dirty = false;
+    dispatch->pending_dirty_full = false;
+    dispatch->pending_dirty_x = 0;
+    dispatch->pending_dirty_y = 0;
+    dispatch->pending_dirty_w = 0;
+    dispatch->pending_dirty_h = 0;
+    packet_dispatch_render(dispatch);
+}
+
+static void packet_dispatch_reset_proxy(PacketDispatch *dispatch)
+{
+    packet_dispatch_reset_state(dispatch);
+    packet_dispatch_schedule_ready(dispatch);
+}
+
+void packet_dispatch_serial_disconnected(PacketDispatch *dispatch)
+{
+    if (dispatch == NULL) {
+        return;
+    }
+    packet_dispatch_cancel_ready(dispatch);
+    packet_dispatch_reset_state(dispatch);
+}
+
+void packet_dispatch_serial_reconnected(PacketDispatch *dispatch)
+{
+    if (dispatch == NULL) {
+        return;
+    }
+    packet_dispatch_reset_proxy(dispatch);
+}
+
+static bool packet_dispatch_reset_is_pending(PacketDispatch *dispatch)
+{
+    pthread_mutex_lock(&dispatch->reset_mutex);
+    bool pending = dispatch->reset_pending;
+    pthread_mutex_unlock(&dispatch->reset_mutex);
+    return pending;
 }
 
 static void dispatch_send_reply(PacketDispatch *dispatch, const VideoDeviceResult *result)
@@ -252,6 +423,11 @@ void packet_dispatch_handle_packet(const Packet *packet, size_t offset, void *us
 
     (void)offset;
 
+    if (packet->type != PACKET_RESET
+        && packet_dispatch_reset_is_pending(dispatch)) {
+        return;
+    }
+
     if (storage_protocol_handle_packet(
             packet,
             dispatch->serial_port,
@@ -269,6 +445,11 @@ void packet_dispatch_handle_packet(const Packet *packet, size_t offset, void *us
     }
 
     if (pty_console_handle_packet(dispatch->pty_console, packet)) {
+        return;
+    }
+
+    if (packet->type == PACKET_RESET) {
+        packet_dispatch_reset_proxy(dispatch);
         return;
     }
 

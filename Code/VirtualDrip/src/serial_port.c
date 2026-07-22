@@ -183,35 +183,32 @@ static bool write_all(int fd, const void *buffer, size_t length)
 
 SerialPort *serial_port_open(const char *path, int baud_rate)
 {
-    int fd = open(path, O_RDWR | O_NOCTTY | O_NONBLOCK);
-    if (fd < 0) {
-        perror(path);
-        return NULL;
-    }
-
-    if (!configure_serial_port(fd, baud_rate)) {
-        close(fd);
+    if (baud_to_speed(baud_rate) == 0) {
+        fprintf(stderr, "Unsupported baud rate %d\n", baud_rate);
         return NULL;
     }
 
     SerialPort *port = calloc(1, sizeof(*port));
     if (port == NULL) {
         fprintf(stderr, "Failed to allocate serial port\n");
-        close(fd);
         return NULL;
     }
 
     port->path = strdup(path);
     if (port->path == NULL) {
         fprintf(stderr, "Failed to allocate serial path\n");
-        close(fd);
         free(port);
         return NULL;
     }
 
-    port->fd = fd;
+    port->fd = -1;
     port->baud_rate = baud_rate;
     pthread_mutex_init(&port->tx_mutex, NULL);
+    if (!serial_port_reopen(port)) {
+        fprintf(stderr,
+            "Serial device %s is unavailable; waiting for it to appear\n",
+            path);
+    }
     return port;
 }
 
@@ -221,18 +218,74 @@ void serial_port_close(SerialPort *port)
         return;
     }
 
-    if (port->fd >= 0) {
-        close(port->fd);
-        port->fd = -1;
+    pthread_mutex_lock(&port->tx_mutex);
+    int fd = port->fd;
+    port->fd = -1;
+    if (fd >= 0) {
+        close(fd);
     }
+    pthread_mutex_unlock(&port->tx_mutex);
     pthread_mutex_destroy(&port->tx_mutex);
     free(port->path);
     free(port);
 }
 
-int serial_port_fd(const SerialPort *port)
+int serial_port_fd(SerialPort *port)
 {
-    return port == NULL ? -1 : port->fd;
+    if (port == NULL) {
+        return -1;
+    }
+    pthread_mutex_lock(&port->tx_mutex);
+    int fd = port->fd;
+    pthread_mutex_unlock(&port->tx_mutex);
+    return fd;
+}
+
+bool serial_port_is_connected(SerialPort *port)
+{
+    return serial_port_fd(port) >= 0;
+}
+
+bool serial_port_mark_disconnected(SerialPort *port, int expected_fd)
+{
+    if (port == NULL || expected_fd < 0) {
+        return false;
+    }
+
+    pthread_mutex_lock(&port->tx_mutex);
+    bool changed = port->fd == expected_fd;
+    if (changed) {
+        port->fd = -1;
+        close(expected_fd);
+    }
+    pthread_mutex_unlock(&port->tx_mutex);
+    return changed;
+}
+
+bool serial_port_reopen(SerialPort *port)
+{
+    if (port == NULL) {
+        return false;
+    }
+
+    int fd = open(port->path, O_RDWR | O_NOCTTY | O_NONBLOCK);
+    if (fd < 0) {
+        return false;
+    }
+    if (!configure_serial_port(fd, port->baud_rate)) {
+        close(fd);
+        return false;
+    }
+
+    pthread_mutex_lock(&port->tx_mutex);
+    if (port->fd >= 0) {
+        pthread_mutex_unlock(&port->tx_mutex);
+        close(fd);
+        return true;
+    }
+    port->fd = fd;
+    pthread_mutex_unlock(&port->tx_mutex);
+    return true;
 }
 
 const char *serial_port_path(const SerialPort *port)
@@ -264,7 +317,7 @@ static bool build_packet_bytes(
 
 bool serial_port_send_packet(SerialPort *port, uint8_t type, const uint8_t *payload, uint16_t length)
 {
-    if (port == NULL || port->fd < 0) {
+    if (port == NULL) {
         return false;
     }
 
@@ -279,7 +332,7 @@ bool serial_port_send_packet(SerialPort *port, uint8_t type, const uint8_t *payl
      * this port with the keyboard writer thread.
      */
     pthread_mutex_lock(&port->tx_mutex);
-    bool sent = write_all(port->fd, bytes, byte_count);
+    bool sent = port->fd >= 0 && write_all(port->fd, bytes, byte_count);
     pthread_mutex_unlock(&port->tx_mutex);
 
     return sent;
@@ -292,7 +345,7 @@ bool serial_port_send_packet_paced(
     uint16_t length,
     unsigned inter_byte_delay_us)
 {
-    if (port == NULL || port->fd < 0) {
+    if (port == NULL) {
         return false;
     }
 
@@ -303,8 +356,8 @@ bool serial_port_send_packet_paced(
     }
 
     pthread_mutex_lock(&port->tx_mutex);
-    bool sent = true;
-    for (size_t index = 0; index < byte_count; ++index) {
+    bool sent = port->fd >= 0;
+    for (size_t index = 0; sent && index < byte_count; ++index) {
         if (!write_all(port->fd, &bytes[index], 1)) {
             sent = false;
             break;
@@ -320,20 +373,30 @@ bool serial_port_send_packet_paced(
 
 bool serial_port_wait_output_drained(SerialPort *port, int timeout_ms)
 {
-    if (port == NULL || port->fd < 0) {
+    if (port == NULL) {
         return false;
     }
     if (timeout_ms < 0) {
         timeout_ms = 0;
     }
 
+    pthread_mutex_lock(&port->tx_mutex);
+    int fd = port->fd;
+    if (fd < 0) {
+        pthread_mutex_unlock(&port->tx_mutex);
+        return false;
+    }
+
+    bool drained = false;
+
 #ifdef TIOCOUTQ
     int elapsed_ms = 0;
     for (;;) {
         int pending = 0;
-        if (ioctl(port->fd, TIOCOUTQ, &pending) == 0) {
+        if (ioctl(fd, TIOCOUTQ, &pending) == 0) {
             if (pending <= 0) {
-                return true;
+                drained = true;
+                goto done;
             }
         } else if (errno == EINTR) {
             continue;
@@ -341,12 +404,12 @@ bool serial_port_wait_output_drained(SerialPort *port, int timeout_ms)
             break;
         } else {
             perror("ioctl TIOCOUTQ");
-            return false;
+            goto done;
         }
 
         if (elapsed_ms >= timeout_ms) {
             fprintf(stderr, "serial drain timeout with output bytes pending\n");
-            return false;
+            goto done;
         }
         usleep(1000);
         ++elapsed_ms;
@@ -355,24 +418,25 @@ bool serial_port_wait_output_drained(SerialPort *port, int timeout_ms)
     (void)timeout_ms;
 #endif
 
-    if (tcdrain(port->fd) != 0) {
-        if (errno == EINTR) {
-            return true;
-        }
+    if (tcdrain(fd) == 0 || errno == EINTR) {
+        drained = true;
+    } else {
         perror("tcdrain");
-        return false;
     }
-    return true;
+
+done:
+    pthread_mutex_unlock(&port->tx_mutex);
+    return drained;
 }
 
 bool serial_port_send_raw(SerialPort *port, const uint8_t *bytes, size_t length)
 {
-    if (port == NULL || port->fd < 0 || bytes == NULL || length == 0) {
+    if (port == NULL || bytes == NULL || length == 0) {
         return false;
     }
 
     pthread_mutex_lock(&port->tx_mutex);
-    bool sent = write_all(port->fd, bytes, length);
+    bool sent = port->fd >= 0 && write_all(port->fd, bytes, length);
     pthread_mutex_unlock(&port->tx_mutex);
 
     return sent;

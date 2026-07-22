@@ -70,6 +70,10 @@ void keyboard_transport_note_incoming_packet(KeyboardTransport *transport, const
  * retained accelerator/stream state. */
 void keyboard_transport_note_present(KeyboardTransport *transport);
 void keyboard_transport_set_storage_active(KeyboardTransport *transport, bool active);
+/** Drop queued input and hold new sends while the proxy reset is active. */
+void keyboard_transport_reset_begin(KeyboardTransport *transport);
+/** Release the reset hold after the post-reset PROXY_READY is sent. */
+void keyboard_transport_reset_end(KeyboardTransport *transport);
 void keyboard_transport_get_stats(KeyboardTransport *transport, KeyboardTransportStats *stats);
 
 #endif

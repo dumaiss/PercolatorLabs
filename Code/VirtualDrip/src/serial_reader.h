@@ -19,6 +19,10 @@
 /** Return true when the serial reader should exit. */
 typedef bool (*SerialReaderShouldStop)(void *userdata);
 
+/** Report initial connection, loss, or restoration of the serial device. */
+typedef void (*SerialReaderConnectionChanged)(
+    bool connected, bool reconnected, void *userdata);
+
 /** Borrowed configuration copied into the reader object at start. */
 typedef struct {
     SerialPort *port;
@@ -26,6 +30,8 @@ typedef struct {
     void *handler_userdata;
     SerialReaderShouldStop should_stop;
     void *should_stop_userdata;
+    SerialReaderConnectionChanged connection_changed;
+    void *connection_userdata;
 } SerialReaderConfig;
 
 /** Opaque joinable serial reader thread handle. */

@@ -34,5 +34,7 @@ const char *pty_console_slave_path(const PtyConsole *console);
 
 bool pty_console_handle_packet(PtyConsole *console, const Packet *packet);
 void pty_console_set_storage_active(PtyConsole *console, bool active);
+void pty_console_reset_begin(PtyConsole *console);
+void pty_console_reset_end(PtyConsole *console);
 
 #endif

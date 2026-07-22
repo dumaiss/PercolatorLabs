@@ -37,6 +37,23 @@ int test_protocol(void);
 
 static pthread_mutex_t framebuffer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static void serial_connection_changed(
+    bool connected, bool reconnected, void *userdata)
+{
+    PacketDispatch *dispatch = (PacketDispatch *)userdata;
+    if (connected && reconnected) {
+        packet_dispatch_serial_reconnected(dispatch);
+    } else if (connected) {
+        bool ready_sent = serial_port_send_packet(
+            dispatch->serial_port, PACKET_PROXY_READY, NULL, 0);
+        fprintf(stderr,
+            "Sent packetized proxy readiness: PROXY_READY (%s)\n",
+            ready_sent ? "ok" : "failed");
+    } else {
+        packet_dispatch_serial_disconnected(dispatch);
+    }
+}
+
 /* Backend selection stays centralized until additional concrete backends exist. */
 static VideoDevice *create_video_backend(const char *backend_name)
 {
@@ -120,7 +137,6 @@ int main(int argc, char **argv)
             storage_backend_close(&storage_backend);
             return 1;
         }
-
         if (!storage_backend_open(&storage_backend, config.disk_a_path)) {
             serial_port_close(serial_port);
             packet_dispatch_destroy(&dispatch);
@@ -169,6 +185,8 @@ int main(int argc, char **argv)
             .handler_userdata = &dispatch,
             .should_stop = app_runtime_should_stop,
             .should_stop_userdata = NULL,
+            .connection_changed = serial_connection_changed,
+            .connection_userdata = &dispatch,
         };
         /* Serial callbacks run on the reader thread and enter PacketDispatch. */
         serial_reader = serial_reader_start(&reader_config);
@@ -184,12 +202,6 @@ int main(int argc, char **argv)
             return 1;
         }
 
-        /*
-         * Signal to the Z80 only after the serial reader is active, so the
-         * first framed storage/display packet cannot beat the proxy RX path.
-         */
-        bool ready_sent = serial_port_send_packet(serial_port, PACKET_PROXY_READY, NULL, 0);
-        fprintf(stderr, "Sent packetized proxy readiness: PROXY_READY (%s)\n", ready_sent ? "ok" : "failed");
     }
 
     int server_status = 0;
@@ -211,11 +223,11 @@ int main(int argc, char **argv)
         if (display == NULL) {
             app_runtime_request_stop();
             serial_reader_join(serial_reader);
+            packet_dispatch_destroy(&dispatch);
             pty_console_destroy(pty_console);
             keyboard_transport_destroy(keyboard_transport);
             serial_port_close(serial_port);
             storage_backend_close(&storage_backend);
-            packet_dispatch_destroy(&dispatch);
             free(framebuffer);
             video_device_destroy(video_device);
             return 1;
@@ -236,12 +248,12 @@ int main(int argc, char **argv)
             fprintf(stderr, "Failed to allocate back framebuffer\n");
             app_runtime_request_stop();
             serial_reader_join(serial_reader);
+            packet_dispatch_destroy(&dispatch);
             display_libvncserver_destroy(display);
             pty_console_destroy(pty_console);
             keyboard_transport_destroy(keyboard_transport);
             serial_port_close(serial_port);
             storage_backend_close(&storage_backend);
-            packet_dispatch_destroy(&dispatch);
             free(framebuffer);
             video_device_destroy(video_device);
             return 1;
@@ -280,12 +292,12 @@ int main(int argc, char **argv)
 
     app_runtime_request_stop();
     serial_reader_join(serial_reader);
+    packet_dispatch_destroy(&dispatch);
     display_libvncserver_destroy(display);
     pty_console_destroy(pty_console);
     keyboard_transport_destroy(keyboard_transport);
     serial_port_close(serial_port);
     storage_backend_close(&storage_backend);
-    packet_dispatch_destroy(&dispatch);
     free(framebuffer);
     free(back_framebuffer);
     video_device_destroy(video_device);

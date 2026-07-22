@@ -26,6 +26,8 @@ bool storage_backend_open(StorageBackend *backend, const char *path);
 void storage_backend_close(StorageBackend *backend);
 bool storage_backend_read(StorageBackend *backend, uint32_t lba, uint8_t *data);
 bool storage_backend_write(StorageBackend *backend, uint32_t lba, const uint8_t *data);
+/** Flush committed writes without changing the image contents or geometry. */
+bool storage_backend_flush(StorageBackend *backend);
 const char *storage_backend_path(const StorageBackend *backend);
 
 #endif

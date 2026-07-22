@@ -26,6 +26,7 @@ struct PtyConsole {
     void *should_stop_userdata;
     pthread_mutex_t state_mutex;
     bool storage_active;
+    bool reset_active;
 };
 
 static bool pty_console_should_stop(PtyConsole *console)
@@ -101,23 +102,32 @@ static int pty_console_open_master(char *slave_path, size_t slave_path_size)
     return master_fd;
 }
 
-static bool pty_console_storage_active(PtyConsole *console)
+static bool pty_console_send_blocked(PtyConsole *console)
 {
     pthread_mutex_lock(&console->state_mutex);
-    bool active = console->storage_active;
+    bool blocked = console->storage_active || console->reset_active;
     pthread_mutex_unlock(&console->state_mutex);
-    return active;
+    return blocked;
 }
 
 static bool pty_console_wait_send_allowed(PtyConsole *console)
 {
-    while (pty_console_storage_active(console)) {
+    for (;;) {
+        pthread_mutex_lock(&console->state_mutex);
+        bool storage_active = console->storage_active;
+        bool reset_active = console->reset_active;
+        pthread_mutex_unlock(&console->state_mutex);
+        if (reset_active) {
+            return false;
+        }
+        if (!storage_active) {
+            return true;
+        }
         if (pty_console_should_stop(console)) {
             return false;
         }
         usleep(10000);
     }
-    return true;
 }
 
 static bool pty_console_wait_writable(int fd)
@@ -185,7 +195,10 @@ static void *pty_console_reader_thread(void *context)
         ssize_t bytes_read = read(console->master_fd, buffer, sizeof(buffer));
         if (bytes_read > 0) {
             if (!pty_console_wait_send_allowed(console)) {
-                break;
+                if (pty_console_should_stop(console)) {
+                    break;
+                }
+                continue;
             }
             bool sent = serial_port_send_packet(
                 console->serial_port,
@@ -302,6 +315,9 @@ bool pty_console_handle_packet(PtyConsole *console, const Packet *packet)
     if (packet->length == 0) {
         return true;
     }
+    if (pty_console_send_blocked(console)) {
+        return true;
+    }
 
     bool written = pty_console_write_all(console->master_fd, packet->payload, packet->length);
     if (console->log_packets) {
@@ -317,5 +333,27 @@ void pty_console_set_storage_active(PtyConsole *console, bool active)
     }
     pthread_mutex_lock(&console->state_mutex);
     console->storage_active = active;
+    pthread_mutex_unlock(&console->state_mutex);
+}
+
+void pty_console_reset_begin(PtyConsole *console)
+{
+    if (console == NULL) {
+        return;
+    }
+    pthread_mutex_lock(&console->state_mutex);
+    console->reset_active = true;
+    console->storage_active = false;
+    pthread_mutex_unlock(&console->state_mutex);
+    (void)tcflush(console->master_fd, TCIOFLUSH);
+}
+
+void pty_console_reset_end(PtyConsole *console)
+{
+    if (console == NULL) {
+        return;
+    }
+    pthread_mutex_lock(&console->state_mutex);
+    console->reset_active = false;
     pthread_mutex_unlock(&console->state_mutex);
 }

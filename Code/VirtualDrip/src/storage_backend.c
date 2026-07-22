@@ -173,6 +173,19 @@ bool storage_backend_write(StorageBackend *backend, uint32_t lba, const uint8_t 
     return true;
 }
 
+bool storage_backend_flush(StorageBackend *backend)
+{
+    if (backend == NULL || backend->file == NULL) {
+        return true;
+    }
+    if (fflush(backend->file) != 0) {
+        perror(storage_backend_path(backend));
+        return false;
+    }
+    clearerr(backend->file);
+    return true;
+}
+
 const char *storage_backend_path(const StorageBackend *backend)
 {
     return backend == NULL || backend->path == NULL ? "" : backend->path;

@@ -17,22 +17,32 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** Opaque owner of an open serial fd, path copy, baud rate, and TX mutex. */
+/** Opaque owner of a reconnectable serial fd, path, baud rate, and I/O mutex. */
 typedef struct SerialPort SerialPort;
 
 /**
- * Open and configure a serial device.
+ * Create a serial owner and try to open/configure its device.
  *
- * The returned object owns the fd and must be released with serial_port_close().
- * Only baud rates supported by the implementation's termios mapping are valid.
+ * The object is still returned when the path is temporarily absent; the serial
+ * reader can then reopen it after USB re-enumeration. NULL means allocation
+ * failure. Only supported termios baud rates are valid.
  */
 SerialPort *serial_port_open(const char *path, int baud_rate);
 
 /** Close the fd, destroy the TX mutex, and free the SerialPort object. */
 void serial_port_close(SerialPort *port);
 
-/** Return the raw fd for read-side integration, or -1 for NULL. */
-int serial_port_fd(const SerialPort *port);
+/** Return a snapshot of the active fd, or -1 while disconnected. */
+int serial_port_fd(SerialPort *port);
+
+/** Return true while an FT230X device is open and configured. */
+bool serial_port_is_connected(SerialPort *port);
+
+/** Close the active fd if it still matches the reader's failed fd. */
+bool serial_port_mark_disconnected(SerialPort *port, int expected_fd);
+
+/** Try to reopen and configure the original path after re-enumeration. */
+bool serial_port_reopen(SerialPort *port);
 
 /** Return the borrowed configured path string, or an empty string for NULL. */
 const char *serial_port_path(const SerialPort *port);
