@@ -137,6 +137,16 @@
 	)
 	(wire
 		(pts
+			(xy 50.8 60.96) (xy 50.8 74.93)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a0ca2f14-e3fa-4191-abe0-372060e172b7")
+	)
+	(wire
+		(pts
 			(xy 63.5 60.96) (xy 63.5 74.93)
 		)
 		(stroke
@@ -346,6 +356,16 @@
 		(pin "~{NMI}" passive
 			(at 86.36 60.96 270)
 			(uuid "c6d16e88-aaf9-44c6-9881-a2fca42e37b9")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "D1" bidirectional
+			(at 50.8 60.96 270)
+			(uuid "8fe645fc-e8a3-469a-bf18-c311d09c3e23")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -638,6 +658,16 @@
 		(pin "~{NMI}" passive
 			(at 86.36 74.93 90)
 			(uuid "8ca15af6-ff48-4bf7-89e6-65780a9d490d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "D1" bidirectional
+			(at 50.8 74.93 90)
+			(uuid "521ffb67-8f34-4a24-af4a-8f18633f388a")
 			(effects
 				(font
 					(size 1.27 1.27)
