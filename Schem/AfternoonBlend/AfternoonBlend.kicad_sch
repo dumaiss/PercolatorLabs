@@ -485,7 +485,7 @@
 				(justify right)
 			)
 		)
-		(pin "~{RESET}" input
+		(pin "~{RESET}" passive
 			(at 132.08 102.87 90)
 			(uuid "6744b5f3-3434-4b4f-90c9-686bf064a8f6")
 			(effects

@@ -78,22 +78,6 @@
       ],
       "drc_exclusions": [
         [
-          "courtyards_overlap|111580400|93153400|2c0bc5a5-8096-483e-a2ac-4ab8b9c233eb|ccc91754-a709-416c-b6b3-a837b32560f3",
-          "By design, under the chip"
-        ],
-        [
-          "courtyards_overlap|125704000|93201864|5871d10d-f8a8-4aa2-88b5-f55c9eec1390|8836af71-9bf7-44b8-880a-ccfed39d62a6",
-          "By design, under the chip"
-        ],
-        [
-          "courtyards_overlap|139368600|93201864|c4e201b3-3e83-4f41-aa26-a6d5ab563423|f739e2cf-1f38-48c9-bd37-b4e3712b0cb2",
-          "By design, under the chip"
-        ],
-        [
-          "courtyards_overlap|153414200|93102600|bb64409b-b273-4b7e-afe0-d21097bcf9c4|d3530e66-374b-47b5-b9cb-045f1899dd98",
-          "By design, under the chip"
-        ],
-        [
           "starved_thermal|211209300|71412600|673b32bd-b2f8-40a1-a023-71c4843f8c34|22dc723d-d6f4-49bc-bec5-46a95e47a40a|B.Cu",
           ""
         ]
@@ -758,7 +742,7 @@
         "uuid": "b6680a6e-90e3-40c9-86c3-54d4e29b0686"
       }
     ],
-    "used_designators": "",
+    "used_designators": "R15,R36,#PWR10,#PWR17-19,#PWR28,#PWR58,#PWR62-65,C21-22,Q1,U5,U9,U13",
     "variants": []
   },
   "sheets": [

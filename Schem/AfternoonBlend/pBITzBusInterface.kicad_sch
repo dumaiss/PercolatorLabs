@@ -4754,7 +4754,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_SO:TSSOP-20-1EP_4.4x6.5mm_P0.65mm_EP2.15x3.35mm"
+		(property "Footprint" "Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm"
 			(at 187.96 177.8 0)
 			(hide yes)
 			(show_name no)
@@ -4777,6 +4777,17 @@
 			)
 		)
 		(property "Description" "8-bit Buffer/Line Driver 3-state outputs"
+			(at 187.96 177.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "74HCT541PW,118"
 			(at 187.96 177.8 0)
 			(hide yes)
 			(show_name no)
@@ -5284,7 +5295,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "74HCT541PW,118"
+		(property "MANUFACTURER_PART_NUMBER" ""
 			(at 251.46 180.34 0)
 			(hide yes)
 			(show_name no)
@@ -5777,7 +5788,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "74HCT541PW,118"
+		(property "MANUFACTURER_PART_NUMBER" ""
 			(at 251.46 217.17 0)
 			(hide yes)
 			(show_name no)
@@ -6329,7 +6340,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "74HCT541PW,118"
+		(property "MANUFACTURER_PART_NUMBER" ""
 			(at 120.65 166.37 0)
 			(hide yes)
 			(show_name no)
