@@ -12604,7 +12604,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RC0402FR-07100KL"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-07100KL"
 			(at 580.39 66.04 90)
 			(hide yes)
 			(show_name no)
@@ -13184,7 +13184,7 @@
 				)
 			)
 		)
-		(property "Value" "74AHC20"
+		(property "Value" "74HC20"
 			(at 297.1703 182.88 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13603,7 +13603,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RC0402FR-07100KL"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-07100KL"
 			(at 450.85 175.26 90)
 			(hide yes)
 			(show_name no)
@@ -13907,7 +13907,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RC0402FR-07100KL"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-07100KL"
 			(at 580.39 142.24 90)
 			(hide yes)
 			(show_name no)
@@ -14190,7 +14190,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0747KL"
 			(at 101.6 138.43 90)
 			(hide yes)
 			(show_name no)
@@ -15699,7 +15699,7 @@
 				)
 			)
 		)
-		(property "Value" "74AHC20"
+		(property "Value" "74HC20"
 			(at 297.1703 167.64 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15754,40 +15754,40 @@
 			)
 		)
 		(pin "6"
-			(uuid "18ac7799-3ce2-4f9b-bcd9-0f0dbd96fa06")
+			(uuid "18ac7799-3ce2-4f9b-bcd9-0f0dbd96fa07")
 		)
 		(pin "8"
-			(uuid "fdc56fac-c4e6-4333-926e-ef8f7eccc6cc")
+			(uuid "fdc56fac-c4e6-4333-926e-ef8f7eccc6cd")
 		)
 		(pin "5"
-			(uuid "aa5335c7-21b6-482f-9ede-d881cca030aa")
+			(uuid "aa5335c7-21b6-482f-9ede-d881cca030ab")
 		)
 		(pin "13"
-			(uuid "3f831789-9d9c-4241-a72e-50886f9e201f")
+			(uuid "3f831789-9d9c-4241-a72e-50886f9e2020")
 		)
 		(pin "7"
-			(uuid "a2fbd0a2-75f9-4e2d-8bc8-72fe660a9e2f")
+			(uuid "a2fbd0a2-75f9-4e2d-8bc8-72fe660a9e30")
 		)
 		(pin "1"
-			(uuid "2dac8a4e-4ada-417e-a891-f2eff86e467d")
+			(uuid "2dac8a4e-4ada-417e-a891-f2eff86e467e")
 		)
 		(pin "14"
-			(uuid "c6d17ee1-90b1-4b40-9c8b-6358a7670fd1")
+			(uuid "c6d17ee1-90b1-4b40-9c8b-6358a7670fd2")
 		)
 		(pin "12"
-			(uuid "0c66b65a-dae9-43af-bf0d-09c3672e13d4")
+			(uuid "0c66b65a-dae9-43af-bf0d-09c3672e13d5")
 		)
 		(pin "10"
-			(uuid "7281a8f3-ab59-41a4-9fcf-eb142ad34446")
+			(uuid "7281a8f3-ab59-41a4-9fcf-eb142ad34447")
 		)
 		(pin "9"
-			(uuid "8ac37097-c476-4c54-8b5e-9cfd0c5388d9")
+			(uuid "8ac37097-c476-4c54-8b5e-9cfd0c5388da")
 		)
 		(pin "4"
-			(uuid "ffbb028d-5603-4350-8b7b-65f12e40e75e")
+			(uuid "ffbb028d-5603-4350-8b7b-65f12e40e75f")
 		)
 		(pin "2"
-			(uuid "63fdb94d-ffef-4964-9fcb-a72321de7d8b")
+			(uuid "63fdb94d-ffef-4964-9fcb-a72321de7d8c")
 		)
 		(instances
 			(project "AfternoonBlend"
@@ -15886,7 +15886,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0747KL"
 			(at 388.62 78.74 0)
 			(hide yes)
 			(show_name no)
@@ -18026,7 +18026,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0747KL"
 			(at 388.62 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -18546,7 +18546,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0747KL"
 			(at 332.74 143.51 0)
 			(hide yes)
 			(show_name no)
@@ -18658,7 +18658,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "RC0402FR-07100KL"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-07100KL"
 			(at 462.28 167.64 90)
 			(hide yes)
 			(show_name no)
@@ -21636,7 +21636,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "CRRCR01FM47KS1"
+		(property "MANUFACTURER_PART_NUMBER" "RC0603FR-0747KL"
 			(at 217.17 134.62 90)
 			(hide yes)
 			(show_name no)
@@ -21992,7 +21992,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "74HC138"
+		(property "Value" "74AHCT138"
 			(at 139.3033 236.22 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -22036,7 +22036,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "SN74HC138DR"
+		(property "MANUFACTURER_PART_NUMBER" "SN74AHCT138PWR"
 			(at 137.16 251.46 0)
 			(hide yes)
 			(show_name no)
@@ -22814,7 +22814,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "74AHC20"
+		(property "Value" "74HC20"
 			(at 44.45 253.9999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -22870,40 +22870,40 @@
 			)
 		)
 		(pin "6"
-			(uuid "18ac7799-3ce2-4f9b-bcd9-0f0dbd96fa06")
+			(uuid "18ac7799-3ce2-4f9b-bcd9-0f0dbd96fa08")
 		)
 		(pin "8"
-			(uuid "fdc56fac-c4e6-4333-926e-ef8f7eccc6cc")
+			(uuid "fdc56fac-c4e6-4333-926e-ef8f7eccc6ce")
 		)
 		(pin "5"
-			(uuid "aa5335c7-21b6-482f-9ede-d881cca030aa")
+			(uuid "aa5335c7-21b6-482f-9ede-d881cca030ac")
 		)
 		(pin "13"
-			(uuid "3f831789-9d9c-4241-a72e-50886f9e201f")
+			(uuid "3f831789-9d9c-4241-a72e-50886f9e2021")
 		)
 		(pin "7"
-			(uuid "a2fbd0a2-75f9-4e2d-8bc8-72fe660a9e2f")
+			(uuid "a2fbd0a2-75f9-4e2d-8bc8-72fe660a9e31")
 		)
 		(pin "1"
-			(uuid "2dac8a4e-4ada-417e-a891-f2eff86e467d")
+			(uuid "2dac8a4e-4ada-417e-a891-f2eff86e467f")
 		)
 		(pin "14"
-			(uuid "c6d17ee1-90b1-4b40-9c8b-6358a7670fd1")
+			(uuid "c6d17ee1-90b1-4b40-9c8b-6358a7670fd3")
 		)
 		(pin "12"
-			(uuid "0c66b65a-dae9-43af-bf0d-09c3672e13d4")
+			(uuid "0c66b65a-dae9-43af-bf0d-09c3672e13d6")
 		)
 		(pin "10"
-			(uuid "7281a8f3-ab59-41a4-9fcf-eb142ad34446")
+			(uuid "7281a8f3-ab59-41a4-9fcf-eb142ad34448")
 		)
 		(pin "9"
-			(uuid "8ac37097-c476-4c54-8b5e-9cfd0c5388d9")
+			(uuid "8ac37097-c476-4c54-8b5e-9cfd0c5388db")
 		)
 		(pin "4"
-			(uuid "ffbb028d-5603-4350-8b7b-65f12e40e75e")
+			(uuid "ffbb028d-5603-4350-8b7b-65f12e40e760")
 		)
 		(pin "2"
-			(uuid "63fdb94d-ffef-4964-9fcb-a72321de7d8b")
+			(uuid "63fdb94d-ffef-4964-9fcb-a72321de7d8d")
 		)
 		(instances
 			(project "AfternoonBlend"
