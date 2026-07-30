@@ -14157,7 +14157,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "SN74HC273DBR"
+		(property "MANUFACTURER_PART_NUMBER" "SN74HC273DWR"
 			(at 88.9 218.44 0)
 			(hide yes)
 			(show_name no)
@@ -15002,7 +15002,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" ""
+		(property "Value" "UPD41464C-10"
 			(at 279.4 102.87 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15142,7 +15142,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" ""
+		(property "Value" "UPD41464C-10"
 			(at 226.06 44.45 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16502,7 +16502,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" ""
+		(property "Value" "UPD41464C-10"
 			(at 279.4 45.72 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17493,7 +17493,7 @@
 				)
 			)
 		)
-		(property "Value" "74AHC139"
+		(property "Value" "74AHCT139"
 			(at 88.9 281.94 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17536,7 +17536,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "SN74AHC139DR"
+		(property "MANUFACTURER_PART_NUMBER" "SN74AHCT139DR"
 			(at 88.9 289.56 0)
 			(hide yes)
 			(show_name no)
@@ -19148,6 +19148,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "1-2199298-8"
+			(at 96.52 129.54 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "8"
 			(uuid "898c5455-049e-4623-8777-fdd6c2ae7953")
 		)
@@ -19344,7 +19355,7 @@
 				)
 			)
 		)
-		(property "Value" "74AHC139"
+		(property "Value" "74AHCT139"
 			(at 88.9 257.81 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -19387,7 +19398,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "SN74AHC139DR"
+		(property "MANUFACTURER_PART_NUMBER" "SN74AHCT139DR"
 			(at 88.9 265.43 0)
 			(hide yes)
 			(show_name no)
@@ -20522,7 +20533,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" ""
+		(property "Value" "UPD41464C-10"
 			(at 226.06 101.6 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21170,7 +21181,7 @@
 				)
 			)
 		)
-		(property "Value" "74AHC139"
+		(property "Value" "74AHCT139"
 			(at 58.42 421.64 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21213,7 +21224,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "SN74AHC139DR"
+		(property "MANUFACTURER_PART_NUMBER" "SN74AHCT139DR"
 			(at 58.42 429.26 90)
 			(hide yes)
 			(show_name no)

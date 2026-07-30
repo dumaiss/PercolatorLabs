@@ -1,8 +1,6 @@
-# pBITz V9958 Video Card — Schematic Review Checklist
+# pBITz V9958 Video Card — Schematic and BOM Review Checklist
 
-Reusable per-revision review template for the **LunchCrema** V9958 RGB video card on the pBITz backplane.
-Same format as the MorningJoe (TMS9928A) checklist, so the two cards can be diffed side by side.
-Phrasing in the **Check** column is generic; the **Status / Notes** columns are filled for the revision under review.
+Reusable per-revision review checklist for the **LunchCrema** V9958 RGBS video card on the pBITz backplane. This revision extends the supplied checklist with the VDP WAIT bridge and a systematic `Value ↔ MPN ↔ footprint` audit.
 
 ---
 
@@ -10,141 +8,204 @@ Phrasing in the **Check** column is generic; the **Status / Notes** columns are 
 
 | Field | Value |
 |---|---|
-| Board name | **LunchCrema** (V9958 linear-RGB / RGBS video card) |
-| Platform | pBITz / Coffee Series (Zephyr-80 host) |
-| Revision | **Rev 1** |
-| Schematic source | `LunchCrema.kicad_sch` + `Video` / `DeviceSelectDecode` / `pBITzBusInterface` sheets (KiCad 10) |
-| Review method | Full S-expression net trace (transform calibrated, 251/285 pin-endpoint hits) |
-| Review date | 2026-06-15 |
-| Net result | **PASS** — no functional blockers; one open bench item (RGB/sync level trim) |
+| Board name | **LunchCrema** — V9958 linear-RGB / RGBS video card |
+| Platform | pBITz / Coffee Series — Zephyr-80 host |
+| Review date | **2026-07-29** |
+| Schematic source | `LunchCrema(3).kicad_sch`, `Video(3).kicad_sch`, `DeviceSelectDecode(6).kicad_sch`, `pBITzBusInterface(6).kicad_sch` |
+| Review method | Hierarchy-aware S-expression net trace, direct schematic metadata parse, and manufacturer/distributor BOM verification |
+| Trace coverage | Video 295/338; select decode 38/38; bus sheet 39/101 pin endpoints. The low bus-sheet percentage is dominated by intentionally unused backplane pins. |
+| Connectivity result | **PASS** — no output-to-output conflicts and no newly identified functional blocker |
+| BOM result | **CONDITIONAL PASS** — one definite package mismatch plus three metadata cleanups before automated ordering |
+| PCB/layout scope | No `.kicad_pcb` was included in this upload; placement and routing were not re-reviewed here |
 
-**Status legend:** ✅ pass · ❌ fail · ⚠️ verify / open · ➖ n/a · 🔧 optional/polish
-
----
-
-## 1. Power & decoupling
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 1.1 | Single supply rail — no stray −5V/+12V | ✅ | Only `+5V` / `GND` symbols |
-| 1.2 | VDP core supply on correct rails | ✅ | VCC (58) → +5V, GND (1) → GND |
-| 1.3 | Analog DAC supply on correct rails | ✅ | VCC/DAC (21) → +5V, GND/DAC (20) → GND |
-| 1.4 | VBB handled intentionally | ✅ | pin 33 left **open** — acceptable per V9938-family guidance. *0.1µF to GND is the conservative alt. (conf: medium — confirm vs V9938 data book)* |
-| 1.5 | Per-IC decoupling (≈0.1µF each) | ✅ | Distributed across ICs |
-| 1.6 | Local bulk capacitor near VDP | 🔧 | No obvious dedicated bulk at U2; a 10µF near the VDP power entry is cheap rail-stiffness insurance if layout has room |
-
-## 2. Clock / oscillator
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 2.1 | Crystal/clock frequency correct | ✅ | Y1 = **21.477270 MHz** (V9958 fXTAL nominal 21.48 MHz) |
-| 2.2 | Exactly one clock source populated | ✅ | **Crystal Y1 live; oscillator Y2 DNP** (confirmed intended — crystal ~$1 vs osc ~$10) |
-| 2.3 | Crystal across XTAL1 / XTAL2 | ✅ | pins 63 / 64 |
-| 2.4 | Load caps suit crystal CL | ✅ | C6 / C7 = 27pF (≈18–20pF effective; suits HC-49 part). Bench-confirm startup if the on-chip osc proves fussy. |
-| 2.5 | Fallback clock path available | ✅ | Y2 canned-oscillator footprint retained DNP as fallback |
-
-## 3. CPU interface
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 3.1 | Host data bus bit order | ✅ | Yamaha uses **normal** numbering (CD0 = LSB) — CD0→D0 straight, **no reversal needed** (unlike TMS9918) |
-| 3.2 | MODE0 / MODE1 from host address | ✅ | pins 29 / 28 → A0 / A1 |
-| 3.3 | /CSR generated | ✅ | U10a (139): CS_VDP & /RD |
-| 3.4 | /CSW generated | ✅ | U10b (139): CS_VDP & /WR & (A2=0) |
-| 3.5 | /WAIT routed if host honors it | ✅ | pin 26 → backplane; pulled up on backplane |
-| 3.6 | Reset routed | ✅ | pin 9 → /RESET |
-
-## 4. VRAM (DRAM)
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 4.1 | DRAM single-supply type | ✅ | 41464 (64K×4, +5V) |
-| 4.2 | Size / organization matches target | ✅ | 4× 64K×4 = **128 KB** |
-| 4.3 | Address bus fully used | ✅ | AD0–AD7 (all 8 mux lines) → A0–A7 |
-| 4.4 | Data bus width | ✅ | RD0–RD7 (8-bit) |
-| 4.5 | Bank strobes correct | ✅ | /CAS0 → U4 (RD0-3)+U5 (RD4-7) = bank 0; /CAS1 → U6+U7 = bank 1 |
-| 4.6 | RAS common to all chips | ✅ | /RAS shared |
-| 4.7 | Write strobe to DRAM /WE | ✅ | R/W̅ → /WE |
-| 4.8 | /OE handling | ✅ | Grounded on all four (standard for this VDP interface) |
-| 4.9 | Expansion bank (/CASX) handled | ✅ | NC (no expansion VRAM) |
-| 4.10 | DRAM speed grade meets VDP timing | ✅ | **100 ns** — faster than the ~150 ns MSX2 baseline; ample margin |
-
-## 5. V9958 sync/genlock & unused pins
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 5.1 | External-sync inputs biased to idle | ✅ | /VRESET (4) and /HRESET (27) → +5V (external sync unused) |
-| 5.2 | /DLCLK not left floating | ✅ | pin 3 → **R20 4k7 pull-up** → +5V |
-| 5.3 | Digital color bus / unused outputs handled | ✅ | C0–C7, DHCLK, HSYNC, YS, CDBR, BLEO → NC (internal DAC in use, not the digital color bus) |
-| 5.4 | CPUCLK/VDS handled | ✅ | pin 8 → NC |
-
-## 6. Interrupt
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 6.1 | VDP /INT pulled up | ✅ | R5 4k7 → +5V on /INT_i |
-| 6.2 | Interrupt reaches bus | ✅ | demux + diode-OR |
-| 6.3 | Diode/open-drain isolation for shared bus | ✅ | U9 BAT54 wired-OR to /INT or /NMI |
-| 6.4 | INT/NMI select logic (if present) | ✅ | U3 (273) latches D0 on /INT_MODE (gated A2, reset by /RESET) → U8 (1G19) demux enabled by /INT |
-
-## 7. Reset
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 7.1 | VDP reset input driven | ✅ | pin 9 → /RESET |
-| 7.2 | Local latches reset with system | ✅ | 273 /Mr → /RESET |
-
-## 8. Video output
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 8.1 | Output type matches intent | ✅ | Linear RGB + composite sync (V9958 internal DAC) |
-| 8.2 | RGB buffer present | ✅ | IC1 MMPQ3904 quad NPN, emitter-follower per channel |
-| 8.3 | RGB AC-coupling | ✅ | C2 / C3 / C4 = 220µF |
-| 8.4 | RGB bias / load / series network | ✅ | 1k base pulldown (R8/9/10), 220Ω emitter load (R14/15/17), 22Ω series (R13/16/18) |
-| 8.5 | Sync path coupling | ✅ | **DC-coupled** — CSYNC → R19 470Ω series → connector (buffered transistor path R7 DNP). Correct for a GBS-style box (sync separator wants DC level preserved). |
-| 8.6 | Connector pinout matches receiver | ✅ | **RGBS over DE15** (R/G/B = 1/2/3, CSYNC = 13, grounds) → GBS converter box. **NOT VGA** (no separate H/V sync). |
-| 8.7 | RGB + sync output levels | ⚠️ | **OPEN — bench item.** Verify amplitude/polarity into the GBS 75Ω input at first power-up; trim 22Ω series (R13/16/18) and/or R19 if hot/dim. 22Ω source is intentionally light on back-termination — fine for a forgiving GBS input. |
-
-## 9. Device select / addressing
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 9.1 | Card chip-select generation | ✅ | 74HC688 compares backplane select code vs coded switch → /CS_VDP |
-| 9.2 | Card address configurable | ✅ | Coded switch + 4k7 pull-ups |
-| 9.3 | Pull-ups on switch / compare inputs | ✅ | 4k7 network |
-
-## 10. Bus / backplane interface
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 10.1 | Data bus D0–D7 mapped | ✅ | to J5 |
-| 10.2 | Address lines mapped | ✅ | A0, A1 (MODE select) + A2 (INT_MODE window) |
-| 10.3 | Control /RD /WR /RESET mapped | ✅ | CTRL_11 / CTRL_12 / CTRL_10 |
-| 10.4 | /WAIT mapped | ✅ | CTRL_2; pulled up on backplane |
-| 10.5 | Interrupt /INT /NMI mapped | ✅ | CTRL_4 / CTRL_5; diode wired-OR, backplane pull-ups |
-| 10.6 | Unused bus pins intentionally NC | ✅ | Unused backplane features left NC |
-
-## 11. General / housekeeping
-
-| # | Check | Status | Notes (Rev 1) |
-|---|---|---|---|
-| 11.1 | No floating logic inputs | ✅ | 273 unused D inputs → GND. *Note: MMPQ3904 T4 base floats via R7 DNP — harmless; ground it if you respin.* |
-| 11.2 | No-connect markers all intentional | ✅ | 33 on Video sheet, reviewed |
-| 11.3 | DNP state = single-population per option | ✅ | Crystal Y1 + R19 live; oscillator Y2 + R7 DNP — **confirmed intended** (crystal clock, DC-coupled sync) |
+**Status legend:** ✅ pass · ❌ fail/blocker · ⚠️ verify/correct · ➖ n/a · 🔧 optional/polish
 
 ---
 
-## Reference facts (verified, with sources)
+## 1. Power and decoupling
 
-- **V9958 is single +5V, 21.477270 MHz, linear RGB (composite deleted vs V9938), up to 128 KB VRAM via 64K×4 DRAM** — Yamaha *V9958 MSX-VIDEO Technical Data Book* <https://map.grauw.nl/resources/video/yamaha_v9958.pdf>; Wikipedia *Yamaha V9958* <https://en.wikipedia.org/wiki/Yamaha_V9958>
-- **Pin-level anchors** (from trace + symbol): VCC 58 / GND 1 / VCC-DAC 21 / GND-DAC 20 / VBB 33; XTAL1-2 63/64; MODE0/1 29/28; CSR/CSW 31/30; WAIT 26; INT 25; RESET 9; RD0-7 41-48; AD0-7 49-56; RAS 62, CAS0 61, CAS1 60, CASX 59, R/W 57; R/G/B 23/22/24; CSYNC 6; DLCLK 3; VRESET 4 / HRESET 27
-- **MMPQ3904** = quad NPN (4× 2N3904), used as emitter-follower RGB buffers — ON Semi datasheet
-- **BOM value confirmations:** Y1 `…S21477270…` = 21.477270 MHz; U4–U7 `41464` = 64K×4 DRAM; DRAM grade = 100 ns
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 1.1 | Single 5 V supply architecture | ✅ | Only `+5V` and `GND` are used by the card circuitry. Unused backplane 3.3 V pins remain disconnected. |
+| 1.2 | V9958 core supply | ✅ | U2 pin 58 is the core VCC; pin 1 is GND. |
+| 1.3 | V9958 DAC supply | ✅ | U2 pin 21 is VCC/DAC; pin 20 is GND/DAC. |
+| 1.4 | Core and DAC local bypass capacitors | ✅ | C10/C11 and the surrounding 100 nF network are present. The previously added capacitor near pin 58 is represented in the schematic. Physical placement was not rechecked without the PCB file. |
+| 1.5 | Local bulk capacitance | ✅ | C12 = 10 µF, Panasonic `EEA-GA1E100H`, radial 5 mm footprint with 2.5 mm lead pitch. |
+| 1.6 | Per-logic and per-DRAM bypassing | ✅ | 100 nF capacitors C8–C11 and C13–C18 cover the active IC groups. |
+| 1.7 | WAIT MOSFET default state | ✅ | R6 = 47 kΩ pulls `WAIT_SINK`/Q1 gate low so Q1 remains off when U11 is unpowered or unprogrammed. |
 
-### Notes carried from the MorningJoe review (shared design DNA)
+## 2. Clock and oscillator
 
-The CPU decode (139), software-selectable INT/NMI router (273 + 1G19 + BAT54), and 688+coded-switch card-select are the same proven blocks as the TMS9928A card — only the address bit used for the INT_MODE window differs (A2 here vs A1 there, because the V9958 consumes A0/A1 for MODE0/MODE1).
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 2.1 | VDP crystal frequency | ✅ | Y1 metadata identifies `HC-49/U-S21477270ABJB`: 21.47727 MHz, 18 pF load. |
+| 2.2 | Crystal load network | ✅ | C6/C7 = 27 pF. With board/input stray capacitance, this is consistent with an 18 pF load crystal. Bench-confirm startup. |
+| 2.3 | Alternate oscillator population | ✅ | Y2 is excluded from BOM and marked DNP. Y1 is the normal population. |
+| 2.4 | V9958 CPUCLK use | ✅ | U2 pin 8 `CPUCLK/VDS` drives U11 pin 1, the WAIT-bridge register clock. |
+| 2.5 | Firmware clock contract | ⚠️ | Normal operation requires R#25.VDS = 0 so pin 8 remains CPUCLK. This is an accepted software contract. |
+
+## 3. CPU interface and address decode
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 3.1 | Host data-bit ordering | ✅ | U2 CD0–CD7 map straight to D0–D7. |
+| 3.2 | VDP mode-address pins | ✅ | MODE0 → A0 and MODE1 → A1. |
+| 3.3 | Read strobe generation | ✅ | U10A uses `/CS_VDP` and `/RD`; O0 drives `/CSR`. |
+| 3.4 | Write and configuration decode | ✅ | U10B uses `/CS_VDP`, A2 and `/WR`; O0 drives `/CSW`, O1 drives `/INT_MODE`. |
+| 3.5 | Decoder family in uploaded file | ⚠️ | The uploaded file contains **74AHC139 / SN74AHC139DR**, not AHCT. Value, MPN and SOIC-16 footprint are mutually consistent, but this does not reflect the previously stated AHCT change. Use `74AHCT139 / SN74AHCT139DR` if TTL-compatible inputs are the intended final configuration. |
+| 3.6 | Reset to VDP | ✅ | U2 pin 9 connects to pBITz `/RESET`. |
+
+## 4. V9958 WAIT-state bridge
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 4.1 | VDP request sensing | ✅ | U11 pins 2/3 sense the same `/CSR` and `/CSW` nets that feed U2 pins 31/30. |
+| 4.2 | Native VDP WAIT input | ✅ | U2 pin 26 `/WAIT` feeds U11 pin 4; it is not directly tied to the shared bus WAIT net. |
+| 4.3 | VDP-clock porch | ✅ | U11 pin 1 is driven from V9958 CPUCLK, allowing the PLD to enforce the complete VDP-clock porch before trusting native `/WAIT`. |
+| 4.4 | Active-low enable and reset default | ✅ | U3 Q1 drives `/WS_EN`. U3 is cleared by `/RESET`, so `/WS_EN` defaults low and the external porch is enabled at reset. |
+| 4.5 | Host WAIT output topology | ✅ | U11 pin 21 drives active-high `WAIT_SINK`; Q1 2N7002 then pulls shared pBITz `/WAIT` low. The motherboard supplies the WAIT pull-up. |
+| 4.6 | MOSFET orientation | ✅ | Q1 gate → `WAIT_SINK`, source → GND, drain → bus `/WAIT`. |
+| 4.7 | PLD unused inputs | ✅ | U11 pins 7–11 and 13 are tied to GND. Unused output macrocells are NC. |
+| 4.8 | Firmware WTE contract | ⚠️ | Normal operation requires R#25.WTE = 1. Boot firmware must enable it using software-paced initial VDP writes. |
+| 4.9 | Configuration-latch write discipline | ⚠️ | U3 captures D0 and D1 together on `/INT_MODE`; interrupt-routing writes must preserve the desired `/WS_EN` bit. |
+| 4.10 | First-article timing proof | ⚠️ | Scope `/WAIT` at the CPU pin while hammering VDP ports. This is a bench item, not a schematic blocker. |
+
+## 5. VRAM subsystem
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 5.1 | Organization and capacity | ✅ | Four 64K×4 DRAMs provide 128 KiB total. |
+| 5.2 | Multiplexed address bus | ✅ | AD0–AD7 reach A0–A7 on U4–U7. |
+| 5.3 | Data mapping | ✅ | U4/U6 carry RD0–RD3; U5/U7 carry RD4–RD7. |
+| 5.4 | Bank strobes | ✅ | `/CAS0` selects U4/U5; `/CAS1` selects U6/U7. |
+| 5.5 | Common strobes | ✅ | `/RAS` and R/W reach all four DRAMs. `/OE` is grounded on all four. |
+| 5.6 | Expansion CAS | ✅ | `/CASX` is intentionally unused. |
+| 5.7 | DRAM socket metadata | ✅ | MPN `1-2199298-5` is an 18-position, 7.62 mm-row DIP socket matching the DIP-18 socket footprint. |
+| 5.8 | Installed DRAM Value metadata | ⚠️ | U4–U7 have blank Value fields. Set them to `41464-10` or the exact installed 100 ns DRAM type while retaining the socket MPN if the DRAMs come from inventory. |
+
+## 6. V9958 sync/genlock and unused pins
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 6.1 | External-sync inputs | ✅ | `/VRESET` and `/HRESET` are tied inactive/high. The trace tool reports this as input-only because it does not reliably merge every graphical power symbol. |
+| 6.2 | `/DLCLK` bias | ✅ | R20 = 4.7 kΩ pull-up. |
+| 6.3 | VBB handling | ✅ | U2 pin 33 is intentionally NC. |
+| 6.4 | Unused digital outputs/bus | ✅ | DHCLK, HSYNC, BLEO, YS, CDBR and C0–C7 are intentionally unused. |
+| 6.5 | CPUCLK no longer NC | ✅ | The old checklist is superseded: CPUCLK is now used by U11. |
+
+## 7. Interrupt routing
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 7.1 | VDP interrupt pull-up | ✅ | R5 = 4.7 kΩ on `/INT_i`. |
+| 7.2 | Software-selectable route | ✅ | U3 Q0 drives U8 select; U8 is enabled by `/INT_i`. |
+| 7.3 | Shared-bus isolation | ✅ | U8 outputs drive the cathodes of U9; U9 anodes connect to bus `/INT` and `/NMI`, preventing push-pull contention. |
+| 7.4 | Diode-array MPN and footprint | ✅ | `BAT54JW-7-F` is a dual isolated Schottky array in SOT-363; the U9 symbol pin map and SC-70/SOT-363 footprint match. |
+| 7.5 | U8 MPN and footprint | ✅ | `SN74LVC1G19DCKR` is the 6-pin SC-70/DCK package and supports 5 V operation. |
+
+## 8. Reset and local configuration latch
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 8.1 | Latch reset | ✅ | U3 `/MR` connects to bus `/RESET`. |
+| 8.2 | Defined unused inputs | ✅ | U3 D2–D7 are tied low. |
+| 8.3 | U3 package metadata | ❌ | **Definite BOM mismatch:** footprint is wide SOIC-20, 1.27 mm pitch, but MPN `SN74HC273DBR` is SSOP-20, 0.65 mm pitch. Change the MPN to `SN74HC273DWR` for the current footprint, or change the footprint to SSOP-20 for DBR. |
+| 8.4 | U3 datasheet/value consistency | ✅ | Value `74HC273` matches the intended octal D flip-flop function; only the package suffix is wrong. |
+
+## 9. Video output
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 9.1 | Output format | ✅ | Linear RGB plus composite sync over a DE-15 connector; this is RGBS, not VGA signalling. |
+| 9.2 | RGB buffers | ✅ | Three MMPQ3904 NPN sections are emitter followers; the fourth section supports the optional sync-buffer path. |
+| 9.3 | RGB AC coupling | ✅ | C2/C3/C4 = 220 µF. |
+| 9.4 | RGB bias/load/series network | ✅ | 1 kΩ base pulldowns, 220 Ω emitter loads and 22 Ω series resistors are present. |
+| 9.5 | Sync population option | ✅ | R19 = 470 Ω direct DC-coupled sync path is populated; R7 is excluded/DNP for the alternate transistor path. |
+| 9.6 | Connector pin assignment | ✅ | R/G/B reach pins 1/2/3, sync reaches pin 13, and signal/shell grounds are connected. |
+| 9.7 | DE-15 MPN and footprint geometry | ✅ | `L77HDE15SD1CH4FVGA` is a right-angle 15-position HD socket with 2.29 × 2.54 mm signal spacing and 25 mm mounting-hole spacing, matching the selected KiCad footprint family. |
+| 9.8 | Output levels | ⚠️ | Confirm RGB amplitude, sync polarity and sync level into the actual GBS receiver during bring-up. |
+
+## 10. Device select and card addressing
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 10.1 | Card select comparator | ✅ | U1 SN74HC688 compares CS0–CS3 against the coded switch. |
+| 10.2 | Configurable address switch | ✅ | SW1 is SH-7070MC, a 16-position complementary-code rotary switch. |
+| 10.3 | Switch footprint | ✅ | The SH-7010C footprint represents the common SH-7000 family physical layout; complementary-code variants share the mechanical pattern. |
+| 10.4 | Switch pull-ups | ✅ | R1–R4 = 4.7 kΩ. |
+| 10.5 | U1 MPN and footprint | ✅ | `SN74HC688PWR` is TSSOP-20 and matches the TSSOP footprint. |
+
+## 11. Bus and backplane interface
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 11.1 | Data bus | ✅ | D0–D7 map to the VDP CPU data bus. |
+| 11.2 | Address/control inputs | ✅ | A0–A2, `/RESET`, `/RD` and `/WR` are correctly mapped from the pBITz connector. |
+| 11.3 | Shared WAIT | ✅ | Q1 drain connects to pBITz CTRL_12 (`/WAIT`). No card-local bus pull-up is present. |
+| 11.4 | Interrupt pins | ✅ | Bus `/INT` and `/NMI` are on CTRL_14/CTRL_15 in the uploaded symbol. |
+| 11.5 | Unused backplane pins | ✅ | Unused clocks, high data/address bits, SPI and 3.3 V pins are intentionally NC. |
+| 11.6 | Trace conflicts | ✅ | Nettrace reported no nets with two ordinary output pins. |
+
+## 12. BOM and procurement metadata
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 12.1 | Passive package codes | ✅ | KEMET `C0603...` and Vishay `CRCW0603...` MPNs correspond to 0603 footprints and the schematic values. |
+| 12.2 | Electrolytic packages | ✅ | `EEA-GA1E100H` matches 10 µF radial, 2.5 mm pitch; `25YXJ220M6.3X11` matches 220 µF, 6.3 mm diameter, 2.5 mm pitch. |
+| 12.3 | V9958 procurement convention | ✅ | U2 Value identifies `V9958`; MPN `D8864-42` identifies the 64-pin 1.778 mm shrink-DIP socket. This is consistent with an inventory-supplied VDP. |
+| 12.4 | DRAM procurement convention | ⚠️ | U4–U7 MPNs correctly identify sockets, but the installed DRAM Values are blank. Add the inventory device identity. |
+| 12.5 | PLD procurement convention | ⚠️ | U11 Value correctly identifies `ATF22V10C-15PU`, but the MPN field is empty despite the socket footprint. If the PLD is inventory-supplied and the socket is purchased, use a 24-pin 7.62 mm socket MPN such as `1-2199298-8`. |
+| 12.6 | PLD datasheet metadata | 🔧 | U11 still links to a PEEL22CV10 datasheet. Replace with the Microchip ATF22V10C datasheet for documentation accuracy. |
+| 12.7 | Decoder intended family | ⚠️ | Current Value/MPN are AHC and match each other. Change both to AHCT if that is the intended final part. The SOIC-16 footprint supports either. |
+| 12.8 | Configuration latch package | ❌ | Correct U3 DBR/DW footprint mismatch before ordering. |
+| 12.9 | Generic semiconductor MPNs | 🔧 | `2N7002` and `MMPQ3904` are usable generic identifiers; choose manufacturer-qualified orderable suffixes if the BOM is intended for fully automated purchasing. |
+| 12.10 | DNP/excluded parts | ✅ | R7 and Y2 are marked DNP and excluded from BOM. |
+
+## 13. General housekeeping
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 13.1 | No floating logic inputs | ✅ | Unused PLD and latch inputs are tied to defined levels. |
+| 13.2 | Intentional NC outputs | ✅ | V9958 unused outputs, unused 139 outputs and unused PLD macrocell pins are intentionally NC. |
+| 13.3 | Trace-tool isolated power pins | ✅ | The tracer reports several VCC pins as isolated because its geometry/power-symbol model does not resolve all graphical power connections. Direct schematic inspection and the decoupling network show these are powered. |
+| 13.4 | Native ERC/DRC | ➖ | Not rerun in this environment. The user previously reported release checks passed; no PCB file was included in this review set. |
+
+---
+
+## Required corrections before BOM order
+
+1. **U3:** change `SN74HC273DBR` to `SN74HC273DWR`, or change the footprint to SSOP-20.
+2. **U10:** confirm whether final part is AHC or AHCT. The uploaded file is AHC; update Value and MPN together if AHCT is intended.
+3. **U4–U7:** populate the installed DRAM Value fields (`41464-10` or exact inventory MPN).
+4. **U11:** add the socket MPN if the BOM is expected to order the PLD socket; update the stale datasheet link.
+
+Only item 1 is a definite order/assembly failure. Items 2–4 are intent/documentation/procurement cleanups.
+
+## First-article checks
+
+1. Scope `/WAIT` at the Z80 pin during back-to-back VDP reads and writes.
+2. Enable R#25.WTE early, retain R#25.VDS = 0, and test with the porch enabled by default.
+3. Hammer VRAM in the busiest display mode intended for Zephyr.
+4. Verify crystal startup over power cycles.
+5. Confirm RGB and CSYNC levels into the GBS input.
+6. Verify interrupt routing in both `/INT` and `/NMI` modes while preserving `/WS_EN`.
+
+---
+
+## BOM verification sources
+
+- Microchip ATF22V10C: <https://www.microchip.com/en-us/product/ATF22V10C>
+- TI SN74AHC139: <https://www.ti.com/product/SN74AHC139>
+- TI SN74AHCT139: <https://www.ti.com/product/SN74AHCT139>
+- TI SN74HC273 package options: <https://www.ti.com/product/SN74HC273>
+- TI SN74LVC1G19: <https://www.ti.com/product/SN74LVC1G19>
+- Diodes BAT54JW: <https://www.diodes.com/assets/Datasheets/ds30157.pdf>
+- Harwin D8864-42: <https://www.harwin.com/products/D8864-42>
+- TE 18-pin socket `1-2199298-5`: <https://www.digikey.ca/en/products/detail/te-connectivity-amp-connectors/1-2199298-5/5022042>
+- TE 24-pin socket `1-2199298-8`: <https://www.te.com/en/product-1-2199298-8.html>
+- Citizen 21.47727 MHz crystal: <https://www.digikey.ca/en/products/detail/citizen-finedevice-co-ltd/HC-49-U-S21477270ABJB/284231>
+- Amphenol DE-15 connector drawing: <https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/l77hde15sd1ch4fvga.pdf>
+- Panasonic EEA-GA1E100H: <https://industrial.panasonic.com/ww/products/pt/aluminum-cap-lead/models/EEAGA1E100H>
 
 ---
 
@@ -152,8 +213,7 @@ The CPU decode (139), software-selectable INT/NMI router (273 + 1G19 + BAT54), a
 
 | Rev | Date | Reviewer | Result | Key notes |
 |---|---|---|---|---|
-| 1 | 2026-06-15 | Claude (net-trace review) | PASS | Baseline. Single-rail V9958, 128 KB banked 41464, crystal clock, /DLCLK + /VRESET + /HRESET biased, discrete-transistor RGB + DC-coupled sync over DE15→GBS. One open bench item: RGB/sync level trim. |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
+| 1 | 2026-06-15 | Previous checklist | PASS | Baseline V9958/VRAM/RGB review; RGB/sync bench check remained open. |
+| 2 | 2026-07-29 | OpenAI GPT-5.6 Thinking | **Electrical PASS / BOM conditional** | WAIT bridge validated. Found U3 DBR-versus-wide-SOIC mismatch; current U10 is AHC rather than previously stated AHCT; DRAM Values blank; U11 socket MPN absent. |
 
-> **Per-rev workflow:** copy this file → bump the Board block → re-run the trace → flip changed rows to ⚠️/❌ and annotate → add a revision-log line. ➖/🔧 are design choices, not failures; only ❌ blocks a spin. ⚠️ items (like §8.7) are expected to close at bring-up, not on the schematic.
+> **Per-revision workflow:** copy this file, update the Board block, rerun the hierarchy trace and metadata audit, resolve all ❌ items, then add a revision-log entry.
