@@ -61,9 +61,9 @@
           "hatch_smoothing_value": 0.1,
           "hatch_thickness": 1.0,
           "min_clearance": 0.4,
-          "min_island_area": 9.99999999996,
+          "min_island_area": 9.9999993548,
           "min_thickness": 0.127,
-          "pad_connection": 0,
+          "pad_connection": 1,
           "remove_islands": 0,
           "thermal_relief_gap": 0.254,
           "thermal_relief_spoke_width": 0.254
@@ -78,16 +78,28 @@
       ],
       "drc_exclusions": [
         [
-          "courtyards_overlap|307595400|164718800|71fac19f-b5bf-4f30-a28d-e765c75416bd|e20ede2d-a6c0-48e0-99d3-b088599df11d",
-          "By design, under the chip"
+          "courtyards_overlap|307607837|162868136|71fac19f-b5bf-4f30-a28d-e765c75416bd|e20ede2d-a6c0-48e0-99d3-b088599df11d",
+          "Capacitor under chip"
         ],
         [
-          "courtyards_overlap|318187200|165099800|48679141-6585-4ced-bcc6-f6cd2a0deaa3|aa45a17b-5a2c-4dde-a3f9-755585aa5e81",
-          "By design, under the chip"
+          "courtyards_overlap|318199637|163249136|48679141-6585-4ced-bcc6-f6cd2a0deaa3|aa45a17b-5a2c-4dde-a3f9-755585aa5e81",
+          "Capacitor under chip"
         ],
         [
-          "courtyards_overlap|329033000|165099800|88d145cc-5bbe-4770-b436-d600e026762f|d5e45f16-0fbc-49d9-88e7-99dd9592e69f",
-          "By design, under the chip"
+          "courtyards_overlap|329045437|163249136|88d145cc-5bbe-4770-b436-d600e026762f|d5e45f16-0fbc-49d9-88e7-99dd9592e69f",
+          "Capacitor under chip"
+        ],
+        [
+          "courtyards_overlap|339802600|163296400|67cb6d4b-6fdb-4277-a506-ec97036f7d63|fb1dcd1d-c1dc-4ec5-931c-0080511073ec",
+          "Capacitor under chip"
+        ],
+        [
+          "silk_edge_clearance|311625800|180246087|83745586-54ba-48d8-b4f8-52d4215b1437|c3246d72-d6b3-40ff-a347-3876d5901c9b",
+          ""
+        ],
+        [
+          "silk_edge_clearance|405625800|180274716|83745586-54ba-48d8-b4f8-52d4215b1437|1e4b8ab1-c1c1-4b69-9a48-d923875348c4",
+          ""
         ]
       ],
       "meta": {
@@ -138,7 +150,7 @@
         "silk_overlap": "ignore",
         "skew_out_of_range": "error",
         "solder_mask_bridge": "error",
-        "starved_thermal": "error",
+        "starved_thermal": "warning",
         "text_height": "warning",
         "text_on_edge_cuts": "error",
         "text_thickness": "warning",
@@ -626,7 +638,7 @@
       "netlist": "",
       "plot": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "LunchCrema.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
@@ -779,7 +791,7 @@
         "uuid": "cd23574f-7a7d-4a14-add5-f302c6d915cb"
       }
     ],
-    "used_designators": "C18",
+    "used_designators": "#FLG2-3,#PWR42-45,J2,C18",
     "variants": []
   },
   "sheets": [
