@@ -3630,6 +3630,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "86093967113T55F1LF"
+			(at 118.745 254 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "B26"
 			(uuid "0d89a1cd-3bff-4705-87f8-92ead954b22a")
 		)
@@ -4232,6 +4243,17 @@
 				)
 			)
 		)
+		(property "MANUFACTURER_PART_NUMBER" "86093967113T55F1LF"
+			(at 254.635 275.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "B26"
 			(uuid "0d89a1cd-3bff-4705-87f8-92ead954b22b")
 		)
@@ -4590,6 +4612,17 @@
 			)
 		)
 		(property "Description" ""
+			(at 255.905 342.9 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "86093967113T55F1LF"
 			(at 255.905 342.9 0)
 			(hide yes)
 			(show_name no)

@@ -18754,7 +18754,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "2N7002"
+		(property "MANUFACTURER_PART_NUMBER" "BSS138"
 			(at 341.63 134.62 0)
 			(hide yes)
 			(show_name no)
@@ -19313,7 +19313,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "C0603C102K4RACTU"
+		(property "MANUFACTURER_PART_NUMBER" "C0603C102J5GACTU"
 			(at 499.11 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -19584,7 +19584,7 @@
 				)
 			)
 		)
-		(property "MANUFACTURER_PART_NUMBER" "C0603C102K4RACTU"
+		(property "MANUFACTURER_PART_NUMBER" "C0603C102J5GACTU"
 			(at 500.38 137.16 0)
 			(hide yes)
 			(show_name no)

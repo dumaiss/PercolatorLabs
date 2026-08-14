@@ -147,7 +147,6 @@
 		)
 		(capping no)
 		(filling no)
-		(zone_defaults)
 		(aux_axis_origin 53.78444 155.911135)
 		(grid_origin 82.35 51.22)
 		(pcbplotparams
@@ -25725,6 +25724,19 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MANUFACTURER_PART_NUMBER" "86093967113T55F1LF"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8f46793a-d7bd-47d9-9854-71aafa766cf3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
