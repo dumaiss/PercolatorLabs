@@ -1,112 +1,181 @@
 # Afternoon Latte VDG Architecture
 
-**Status:** evolving design notes  
-**Project:** pBITz Afternoon Latte VDG  
-**Architecture direction:** RX660-assisted, multi-layer indexed-framebuffer video subsystem
+**Status:** working design notes — not a frozen specification  
+**Project:** pBITz / Coffee Series — Afternoon Latte VDG  
+**Current direction:** RX660-rendered, three-layer indexed framebuffer with one local CPLD controller per layer
 
-This document captures the current architecture discussion for the Afternoon Latte VDG. It is intentionally a working architecture document rather than a frozen hardware specification. Open questions are called out explicitly so later project discussions can refine the design without treating exploratory ideas as commitments.
+This document is the current architectural anchor for the Afternoon Latte VDG. It records the design as it exists after moving away from the earlier HD6445/tile-engine architecture. Open questions are left explicit rather than papered over.
 
 ---
 
 ## 1. Design direction
 
-The VDG started from a tile-engine architecture built around a 6845-family CRTC, tile-map SRAM, pattern SRAM, a serializer, and an indexed-color RAMDAC.
+The VDG began as an HD6445-based tile engine:
 
-The current direction is to simplify the hardware model around a **single framebuffer architecture** rather than supporting several fundamentally different rendering engines. Tile graphics, sprites, fonts, and other higher-level primitives remain useful, but they are implemented by the RX660 as rendering abstractions over framebuffer layers rather than as separate scanout hardware modes.
+```text
+HD6445 -> tile map -> pattern RAM -> serializer -> indexed RAMDAC
+```
 
-The resulting split is deliberate:
+That architecture was useful for exploring tiles, palette banking, sprites, and smooth scrolling, but progressively accumulated special cases when a framebuffer mode was added.
 
-- The **host CPU** submits graphics commands and data.
-- The **RX660** receives, queues, interprets, and renders those commands.
-- The **video pipeline** is deterministic hardware that continuously scans already-rendered framebuffer pages.
-- The RX660 is not in the pixel-by-pixel scanout path.
+The current direction is to support **one fundamental scanout model: linear 8-bit indexed framebuffers**.
 
-The goal is one graphics architecture that can support games, GUI/development use, scrolling, sprite-like objects, text, and effects without requiring separate tile, sprite, and framebuffer engines.
+Higher-level concepts remain available, but are implemented by the RX660 rather than by separate scanout engines:
+
+- tiles are RX660 blits from a tile atlas;
+- sprites/objects are RX660-rendered pixels on an overlay layer;
+- fonts are RX660 rendering operations;
+- scrolling is a framebuffer start-address change;
+- page flipping is a per-layer hardware operation committed at vertical blank.
+
+The resulting split is intentional:
+
+- the **host CPU** submits graphics commands and data;
+- the **RX660** queues and renders those commands;
+- the **three layer controllers** generate deterministic framebuffer addresses;
+- the **pixel path** reads SRAM, registers pixels, composites layers, and drives the RAMDAC;
+- the RX660 never participates in pixel-by-pixel scanout.
 
 ---
 
-## 2. High-level architecture
+## 2. Design lineage
+
+The architecture passed through several useful intermediate forms:
+
+```text
+1. HD6445 tile engine
+      tile map + pattern RAM + serializer
+
+2. Single framebuffer
+      RX660 becomes renderer; CRTC increasingly becomes timing only
+
+3. Three framebuffer layers
+      background / objects / overlay without dedicated sprite hardware
+
+4. HD6445 used CGA-style as framebuffer address source
+      exposed the 14-bit MA ceiling, character-clock limits,
+      RA-banked memory layout, and one-MA-stream limitation
+
+5. CPLD-generated framebuffer addresses
+      linear memory, true per-layer scrolling, no CRTC address ceiling
+
+6. One CPLD per layer
+      forced by the physical reality of three independent address buses;
+      Layer 0 also becomes the one raster/sync timing master
+```
+
+The present architecture has **three programmable devices total**, not four:
+
+```text
+Layer 0 CPLD = framebuffer controller + timing master
+Layer 1 CPLD = framebuffer controller, timing slave
+Layer 2 CPLD = framebuffer controller, timing slave
+```
+
+The HD6445 is removed from this design.
+
+---
+
+## 3. High-level architecture
 
 ```text
  Host CPU
     |
-    | fixed-size command records / bulk records
+    | fixed-size command / data records
     v
-+-------------------+
-| Host interface    |
-| timing glue       |
-| 16-byte FIFO      |
-+---------+---------+
-          |
-          | RX660 drains FIFO rapidly
-          v
-+-----------------------------+
-| RX660                       |
-|                             |
-| ingress service             |
-| internal SRAM command ring  |
-| command parser              |
-| renderer / blitter          |
-| tile / sprite / font APIs   |
-| page-flip scheduler         |
-+-------------+---------------+
-              |
-              | external memory writes
-              v
-       inactive framebuffer pages
++---------------------+
+| Host-interface glue |
+| 16-byte FIFO        |
+| hardware backpressure
++----------+----------+
+           |
+           v
++--------------------------------+
+| RX660                          |
+|                                |
+| FIFO ingress service           |
+| SRAM command ring              |
+| command parser                 |
+| renderer / blitter             |
+| tile / sprite / font APIs      |
+| palette management             |
+| page-flip scheduler            |
++---------------+----------------+
+                |
+                | writes BACK framebuffers
+                | programs layer registers
+                v
 
-                  Scanout side
+                       scanout side
 
-                       CRTC
-                raster/sync timing
-                       |
-          +------------+------------+
-          |            |            |
-       Layer 0       Layer 1       Layer 2
-       FRONT FB      FRONT FB      FRONT FB
-          |            |            |
-       pixel 0       pixel 1       pixel 2
-          +------------+------------+
-                       |
-               transparent priority
-                    compositor
-                       |
-                 output register
-                       |
-                    ADV478
-                       |
-                      RGB
+                         PIXEL CLOCK
+                              |
+                              v
+                    +--------------------+
+                    | Layer 0 CPLD       |
+                    | TIMING MASTER      |
+                    | address generator  |
+                    | HS / VS / DE       |
+                    +---------+----------+
+                              |
+                    synchronized timing
+                    /                     \
+                   v                       v
+          +----------------+      +----------------+
+          | Layer 1 CPLD   |      | Layer 2 CPLD   |
+          | timing slave   |      | timing slave   |
+          | address gen    |      | address gen    |
+          +--------+-------+      +--------+-------+
+                   |                       |
+
+       L0 SRAM A/B          L1 SRAM A/B          L2 SRAM A/B
+           |                    |                    |
+       pixel reg             pixel reg             pixel reg
+           |                    |                    |
+           +--------------------+--------------------+
+                                |
+                     transparent-priority
+                          compositor
+                                |
+                         final pixel reg
+                                |
+                              ADV478
+                                |
+                               RGB
 ```
 
-The three display layers operate in parallel and use physically separate framebuffer memory domains. They share raster timing but do not share a scanout data bus.
+The three framebuffer layers are physically independent memory islands. They fetch simultaneously and never share a scanout data bus.
 
 ---
 
-## 3. Host CPU interface
+## 4. Host CPU interface
 
-### 3.1 Purpose of the hardware FIFO
+### 4.1 Hardware FIFO
 
-The host-to-VDG interface needs timing isolation between comparatively slow retro host buses and the much faster RX660.
+The host-to-VDG boundary uses a small hardware FIFO to absorb timing differences between the retro host bus and the RX660.
 
-The current proposal is a **16-byte hardware FIFO** implemented in the host-interface glue.
+Current proposal:
 
-The FIFO is not the long-term command queue. Its job is only to provide electrical/timing elasticity at the bus boundary.
+- **16-byte FIFO**;
+- host-side hardware backpressure when full;
+- RX660 service indication when data is available;
+- preferably an indication that at least one complete transport record is present.
 
-The real queue lives in RX660 internal SRAM.
+The FIFO is **not** the command queue. It is only a timing-elasticity buffer.
+
+The real queue is in RX660 internal SRAM:
 
 ```text
-Host bus -> 16-byte hardware FIFO -> RX660 SRAM ring -> command consumer
+Host -> 16-byte FIFO -> RX660 SRAM ring -> command consumer -> renderer
 ```
 
-### 3.2 Fixed 8-byte transport records
+### 4.2 Fixed 8-byte records
 
-The current transport proposal uses **fixed 8-byte records**.
+The current transport proposal uses fixed **8-byte records**.
 
 A 16-byte FIFO therefore holds exactly two complete records.
 
-A record can represent either a complete small command or one portion of a larger transfer.
-
-A provisional record shape is:
+Provisional transport shape:
 
 ```text
 byte 0      opcode / record type
@@ -114,211 +183,287 @@ byte 1      flags / layer / subtype
 byte 2..7   parameters or payload
 ```
 
-Examples of operations that may fit in one record include:
+Small operations can fit in one record. Bulk uploads can be represented as a sequence of fixed-size records.
 
-- set scroll position;
-- request page flip;
-- select target layer;
-- short drawing/control operations;
-- object movement or state changes.
+The exact command encoding is not yet frozen.
 
-Large transfers are expressed as a sequence of fixed-size records, for example:
+### 4.3 Backpressure contract
 
-```text
-UPLOAD_BEGIN
-DATA
-DATA
-DATA
-...
-UPLOAD_END
-```
+When the hardware FIFO is full, the host write cycle is stretched using the host's WAIT/READY mechanism until the RX660 drains enough data.
 
-The exact command encoding remains open, but the fixed-size transport is intended to keep the ingress parser trivial and make complete-record detection unambiguous.
+Therefore FIFO depth affects **how often the host stalls**, not correctness.
 
-### 3.3 Backpressure
-
-The FIFO must provide hard backpressure to the host.
-
-If the FIFO is full, the host bus cycle is stalled with the appropriate WAIT/READY mechanism until the RX660 drains enough data for the write to complete.
-
-Therefore FIFO depth affects **host stall frequency**, not correctness. No command or payload byte may be dropped because firmware happened to be busy.
-
-The programming interface should not depend on the FIFO being exactly 16 bytes deep; 16 bytes is the current minimum hardware target. A later implementation may use a deeper FIFO without changing the transport protocol.
-
-### 3.4 Useful FIFO status signals
-
-At minimum the glue logic should provide:
-
-- `FIFO_FULL` for host backpressure;
-- `FIFO_NOT_EMPTY` for RX660 service.
-
-A useful additional watermark is:
-
-- `FIFO_RECORD_READY` when at least 8 bytes are present.
-
-This permits the RX660 to service complete records rather than being interrupted after the first byte of a host burst.
+The protocol must not depend on the FIFO being exactly 16 bytes deep so that a later implementation can use a larger FIFO without changing software.
 
 ---
 
-## 4. RX660 ingress and scheduling model
+## 5. RX660 scheduling model
 
-The RX660 is single-core. The architecture is designed so this is not a problem.
+The RX660 is single-core. The architecture deliberately separates **ingress** from **execution** so that this is not a problem.
 
-The RX660 does **not** need to execute host commands as fast as the host can submit them. It only needs to copy incoming records from the small hardware FIFO into its much larger internal SRAM queue quickly enough to avoid unnecessary host stalls.
-
-The ingress path should therefore do as little work as possible:
+The highest-priority ingress task does as little work as possible:
 
 ```text
 while FIFO has data:
-    copy byte/record into SRAM ring
+    copy bytes / complete records into SRAM ring
 return
 ```
 
-Command parsing and rendering occur later from the SRAM queue.
+Parsing and rendering happen later from the SRAM queue.
 
-Conceptually the RX660 alternates between two kinds of work:
+Conceptually:
 
 ```text
 [GULP incoming records]
         |
-[consume/render queued work]
+[consume / render queued work]
         |
 [GULP incoming records]
         |
 [continue rendering]
 ```
 
-Ingress has bounded latency and higher priority than long-running rendering work.
+Long rendering operations must be interruptible or chunked so FIFO servicing has bounded latency.
 
-Rendering operations must therefore be interruptible or chunked so a large blit/fill cannot block FIFO servicing for an unbounded period.
+The architecture separates three rates:
 
-### 4.1 Three deliberately decoupled rates
+1. host production rate;
+2. FIFO-to-RX660 ingestion rate;
+3. RX660 rendering/execution rate.
 
-The system separates three rates:
-
-1. **Host production rate** — Host CPU to hardware FIFO.
-2. **Ingress rate** — Hardware FIFO to RX660 internal SRAM.
-3. **Execution rate** — RX660 command queue to framebuffer rendering.
-
-```text
-Host -> small FIFO -> SRAM queue -> renderer
-       timing         burst        variable
-       elasticity     absorption   execution cost
-```
-
-The SRAM queue may be several KiB or larger. At 8 bytes per record, even a 4 KiB queue stores 512 records.
+The RX660 only needs to **ingest** fast enough to keep up with the host. It does not need to **render** at host submission rate.
 
 ---
 
-## 5. Rendering model
+## 6. Rendering model
 
-The RX660 is the graphics coprocessor.
+The RX660 is the sole graphics renderer.
 
-It consumes queued host commands and renders them into **inactive framebuffer pages**. It may implement operations such as:
+It writes inactive framebuffer banks and may implement:
 
-- fills;
-- copies/blits;
-- masked blits;
+- fill;
+- copy/blit;
+- masked blit;
 - sprite/object drawing;
 - tile drawing from an atlas;
-- font/text rendering;
-- image decompression or RLE expansion;
-- dirty-rectangle updates;
-- scrolling control;
-- palette management;
+- text/font rendering;
+- image/RLE decoding;
+- dirty-region updates;
+- palette operations;
+- per-layer start-address changes;
 - page-flip requests.
 
-This keeps useful retro-style APIs without requiring dedicated tile or sprite scanout hardware.
-
-For example, a host command such as:
-
-```text
-DRAW_TILE(layer, tile_id, x, y)
-```
-
-means that the RX660 copies the corresponding tile pixels into the selected layer's back framebuffer. The display hardware itself has no concept of a tile.
-
-Likewise, a sprite command is an RX660 rendering abstraction rather than a separate sprite evaluator in the video pipeline.
+The host may still use a retro-style API such as `DRAW_TILE` or `SPRITE_DRAW`, but those names describe RX660 operations, not special hardware scanout formats.
 
 ---
 
-## 6. Three framebuffer layers
+## 7. Three display layers
 
-The current architecture uses **three complete display layers**.
+The card contains three complete 8-bit indexed framebuffer layers.
 
 Natural software conventions are:
 
-- **Layer 0:** world/background;
-- **Layer 1:** objects / sprite-like content / gameplay foreground;
-- **Layer 2:** HUD / UI / pointer / top overlay.
-
-These roles are not fixed in hardware. Applications may instead use the layers for parallax backgrounds, windows, foreground scenery, debugging overlays, or any other purpose.
-
-### 6.1 Indexed pixel format
-
-The current preferred framebuffer model is **8-bit indexed color**.
-
-Each framebuffer byte is directly an ADV478 palette index:
-
 ```text
-framebuffer byte -> IDX[7:0] -> ADV478 -> RGB
+Layer 0   background / world
+Layer 1   objects / sprite-like content
+Layer 2   HUD / UI / pointer / top overlay
 ```
 
-This deliberately avoids recreating the older tile engine's split `ATTR[3:0] + PIX[3:0]` representation in framebuffer memory.
+These are conventions only. Applications may use all three as general-purpose independent planes.
 
-For overlay layers, palette index `0x00` is the natural transparency key.
+Each framebuffer byte is directly an 8-bit ADV478 palette index.
 
-Layer 0 may treat index zero as an ordinary opaque background color.
-
-### 6.2 Pixel compositor
-
-Each layer independently produces one registered 8-bit pixel for the current raster position.
-
-The final compositor is intentionally simple:
-
-```text
-if L2_PIXEL != 0:
-    OUT = L2_PIXEL
-else if L1_PIXEL != 0:
-    OUT = L1_PIXEL
-else:
-    OUT = L0_PIXEL
-```
-
-The selected 8-bit index is registered and sent to the ADV478 RAMDAC.
-
-This is the only shared per-pixel composition logic required for the basic three-layer design.
+For Layers 1 and 2, index `0x00` is the fixed transparent key. Layer 0 is always opaque; index zero is a normal background color there.
 
 ---
 
-## 7. Physical framebuffer memory organization
+## 8. Three-CPLD partition
 
-### 7.1 Separate memory per layer
+### 8.1 Layer 0 / Timing Master
 
-The scanout memories are **physically separated per layer** rather than packed into one shared VRAM pool.
+Layer 0 uses the larger programmable device because it has two responsibilities:
 
-This is an electrical simplification, not a capacity optimization.
+1. generate Layer 0 framebuffer addresses;
+2. generate the common raster timing.
 
-Each layer has its own local SRAM, pixel latch, and address path. All three layers can therefore fetch pixels simultaneously without multiplexing a shared data bus or arbitrating scanout bandwidth among layers.
+Current part direction:
 
 ```text
-same raster position
-       |
-   +---+---+
-   |   |   |
-  L0  L1  L2
- SRAM SRAM SRAM
-   |   |   |
- pixel pixel pixel
+Layer 0 / Timing Master    ATF1508AS-AU100 class
+Layer 1                    ATF1504AS-AU100 class
+Layer 2                    ATF1504AS-AU100 class
 ```
 
-Adding layers consumes additional silicon and PCB area, but does not multiply the scanout latency because the three memory paths operate in parallel.
+Exact fitter results remain a validation item; the split reflects the expected register/macrocell pressure rather than a frozen BOM.
 
-### 7.2 Double buffering
+The master generates:
 
-Each layer is double-buffered.
+- HS;
+- VS;
+- DE or equivalent active-display qualification;
+- frame-start and line-start timing events as required;
+- any common pixel-capture phase/strobe used by all three layer output registers.
 
-Conceptually:
+### 8.2 Layer 1 / Layer 2 timing slaves
+
+The blind layers do **not** free-run their own complete raster generators.
+
+They use the common pixel clock and timing events from Layer 0 so all three layers present the same raster coordinate on the same pixel.
+
+The implementation must explicitly account for master-CPLD clock-to-output delay. A timing signal generated on a pixel-clock edge cannot be assumed to be usable as a same-edge synchronous input in another CPLD.
+
+Therefore line/frame reload strobes must be generated early enough, or on an appropriate phase/edge, to meet setup at the layer controllers' active clock edge.
+
+This is a bench-validation item, not something to leave implicit.
+
+---
+
+## 9. Per-layer framebuffer controller
+
+Each layer CPLD is a small linear framebuffer address generator.
+
+A critical correction from earlier notes is that the live address counter **cannot also be the retained start-address register**.
+
+Each layer therefore needs at least:
+
+```text
+START[18:0]        retained, RX660-programmed
+ADDR[18:0]         live scanout counter
+PAGE               current front/back ownership
+FLIP_REQUEST       pending swap request
+BLANK              L1/L2 only
+```
+
+At frame start:
+
+```text
+ADDR <= START
+```
+
+During the active raster, `ADDR` advances through the framebuffer.
+
+The RX660 computes the start address. The CPLD does not perform coordinate multiplication.
+
+---
+
+## 10. Candidate framebuffer geometry
+
+A concrete candidate geometry for an 800x600 visible mode is:
+
+```text
+physical framebuffer    832 x 630 x 8bpp
+visible viewport         800 x 600
+physical pitch           832 bytes
+page size                832 x 630 = 524,160 bytes
+```
+
+This fits almost exactly in a 512 KiB byte-wide SRAM page.
+
+It also provides:
+
+- 32 pixels of horizontal margin;
+- 30 lines of vertical margin;
+- direct one-pixel scrolling without requiring a general programmable pitch unit.
+
+The visible viewport is only a window into the larger physical surface.
+
+### 10.1 Address sequencing
+
+For the fixed 832-byte physical pitch:
+
+```text
+frame start:
+    ADDR = START
+
+each visible pixel:
+    ADDR += 1
+
+end of 800-pixel visible line:
+    ADDR += 32
+```
+
+The RX660 calculates:
+
+```text
+START = scroll_y * 832 + scroll_x
+```
+
+No multiplier exists in the CPLD.
+
+No coarse/fine horizontal scroll mechanism exists either: one byte is one pixel, so a one-byte change in START is a one-pixel horizontal move.
+
+A vertical move by one source line changes START by 832 bytes.
+
+### 10.2 Example
+
+With viewport origin `(2,1)`:
+
+```text
+START = 1 * 832 + 2 = 834
+```
+
+The first displayed line reads 800 bytes starting at address 834, then the controller skips 32 bytes before the next visible line.
+
+This avoids the line-wrap bug that occurs if horizontal scrolling is attempted inside a tightly packed 800-byte pitch.
+
+---
+
+## 11. Framebuffer SRAM organization
+
+### 11.1 One byte per pixel
+
+Current scanout direction is:
+
+- **8-bit asynchronous SRAM**;
+- one SRAM location = one pixel;
+- one SRAM read per pixel;
+- no wide-word unpacker;
+- no tile serializer;
+- no pixel-phase mux.
+
+At 800x600@60 the nominal pixel clock is 40 MHz, giving a 25 ns pixel period.
+
+A 10 ns SRAM is a plausible candidate, but the timing condition is not merely `25 ns - 10 ns`.
+
+The actual path that must be proven is approximately:
+
+```text
+CPLD counter clock-to-output
++ PCB address propagation
++ SRAM address-access time
++ PCB data propagation
++ output-register setup
+< one pixel period / chosen capture phase
+```
+
+The 40 MHz direct-fetch design is therefore **plausible and intentionally simple**, but must be validated against the exact CPLD speed grade, SRAM part, clock phase, and register family.
+
+### 11.2 Pixel data stays out of the CPLDs
+
+The SRAM data bus does not enter the layer CPLD.
+
+Per layer:
+
+```text
+CPLD A[18:0] -> FRONT SRAM
+                    |
+                    | D[7:0]
+                    v
+              output register
+                    |
+                    v
+              LAYER_PIXEL[7:0]
+```
+
+This preserves CPLD I/O for address generation and control.
+
+All three layer pixel registers should use a **common capture clock/phase**, rather than independently generated capture clocks from each layer CPLD, so their outputs are aligned before composition.
+
+---
+
+## 12. Double buffering and SRAM ownership
+
+Each layer is double-buffered using two physically separate framebuffer SRAM packages:
 
 ```text
 Layer 0A / Layer 0B
@@ -326,210 +471,294 @@ Layer 1A / Layer 1B
 Layer 2A / Layer 2B
 ```
 
-The preferred electrical organization is for the front and back pages to be physically distinct SRAM banks within each layer.
+During a normal frame:
 
-During normal operation:
+- scanout owns the FRONT SRAM;
+- the RX660 owns the BACK SRAM.
 
-- scanout owns the FRONT bank;
-- the RX660 owns the BACK bank.
+At vertical blank the roles may swap.
 
-At vertical blank the banks exchange roles.
+This removes **time arbitration** between scanout and rendering during normal operation, but it does **not** eliminate the electrical ownership problem.
 
-This almost completely removes normal video/RX660 memory arbitration: rendering and scanout ordinarily occur against different physical devices.
+Each physical SRAM must be capable of being connected to either:
 
-### 7.3 Candidate memory sizing
+- the layer CPLD/video address source when it is FRONT; or
+- the RX660 address/data/control bus when it is BACK.
 
-Exact SRAM sizing is not yet frozen.
-
-A particularly attractive target is enough memory per layer for two full 8bpp framebuffer pages. For example, an 800x600x8bpp framebuffer occupies 480,000 bytes; two pages occupy 960,000 bytes, fitting naturally within 1 MiB per layer.
-
-This suggests a possible implementation using two approximately 512 KiB banks per layer, but the final geometry, bus width, package count, and resolution target remain open hardware decisions.
-
----
-
-## 8. Page flipping
-
-The RX660 should request display flips rather than directly switching visible memory at an arbitrary instant.
-
-A CPLD/glue register set can contain something equivalent to:
-
-```text
-NEXT_PAGE
-FLIP_PENDING
-```
-
-At the safe vertical-blank boundary:
-
-```text
-if VBLANK && FLIP_PENDING:
-    DISPLAY_PAGE = NEXT_PAGE
-```
-
-The normal API therefore produces tear-free frame changes.
-
-A global page bit that flips all three layers atomically is the simplest initial implementation. Independent layer page selection may be useful later, but is not required for the first version.
-
-If rendering of a new frame misses its deadline, the RX660 simply does not request the flip; the previous front page remains visible for another frame.
-
----
-
-## 9. CRTC role
-
-The 6345/6445-class CRTC is retained primarily as a **programmable raster and sync generator**.
-
-In the framebuffer architecture it no longer needs to implement tile addressing semantics.
-
-Its useful outputs include:
-
-- horizontal sync;
-- vertical sync;
-- display enable;
-- character/raster progression from which the external pixel-position logic can derive or synchronize X/Y timing.
-
-The framebuffer address generator is implemented externally in the video logic rather than forcing framebuffer storage into the CRTC's native character/tile memory model.
-
-This makes the graphics architecture independent of the historical CGA-style trick of using CRTC raster-address bits as framebuffer bank/address bits, although that technique remains conceptually related.
-
----
-
-## 10. Per-layer framebuffer address generation
-
-Each layer has its own scanout address generator but shares the same raster timing.
-
-Useful per-layer registers are expected to include:
-
-```text
-BASE / page select
-PITCH
-SCROLL_X
-SCROLL_Y
-```
+Therefore each layer still requires explicit **bank steering / ownership multiplexing**.
 
 Conceptually:
 
 ```text
-address = BASE
-        + (Y + SCROLL_Y) * PITCH
-        + (X + SCROLL_X)
+                      VIDEO ADDRESS
+                           |
+RX660 ADDRESS ------------+---- ownership steering ---- SRAM A
+                           |
+                           +---- ownership steering ---- SRAM B
+
+PAGE=A:
+    SRAM A <- VIDEO address/control, data -> pixel register
+    SRAM B <- RX660 address/data/control
+
+PAGE=B:
+    SRAM B <- VIDEO address/control, data -> pixel register
+    SRAM A <- RX660 address/data/control
 ```
 
-No hardware multiplier is required in the pixel path. The implementation can maintain line and pixel address accumulators:
+The exact steering circuit is a major open hardware item and must be drawn explicitly before the memory architecture is considered frozen.
 
-```text
-start of frame:
-    LINE_BASE = BASE + initial vertical offset
+The separate packages remove per-cycle video/MCU arbitration; they do not magically remove address/data/control muxing.
 
-start of line:
-    ADDR = LINE_BASE + horizontal offset
+### 12.1 SRAM control pins
 
-each pixel/word:
-    ADDR += increment
+`/CE`, `/OE`, and `/WE` cannot simply be regarded as permanently tied for a physical SRAM package independent of PAGE state, because that same package alternates between video-read and RX660-read/write roles.
 
-end of line:
-    LINE_BASE += PITCH
-```
-
-This model permits arbitrary pixel-level horizontal and vertical scrolling without tile-boundary logic.
+The steering logic must ensure that only the current owner drives each SRAM and that no bus fight is possible during or around a page swap.
 
 ---
 
-## 11. Smooth scrolling and parallax
+## 13. Page flipping
 
-Framebuffer scanout makes fine scrolling a native address-generation operation rather than a special tile-engine feature.
+The RX660 decides when a rendered back page is complete. Hardware decides when the ownership swap is electrically safe.
 
-Each layer may have independent `SCROLL_X` and `SCROLL_Y` values.
-
-This naturally supports parallax. For example:
+Per layer:
 
 ```text
-Layer 0  distant background, slow scroll
-Layer 1  gameplay plane, normal scroll
-Layer 2  HUD, no scroll
+RX660 finishes BACK page
+        |
+        v
+sets FLIP_REQUEST
+        |
+        v
+next vertical-blank / frame boundary:
+    if FLIP_REQUEST:
+        PAGE ^= 1
+        clear request
 ```
 
-The earlier tile-engine proposal required coarse tile offsets plus fine 0..7-pixel selection and current/next-tile windows for smooth horizontal scrolling. That machinery is unnecessary in the framebuffer-only scanout architecture.
+Page flipping is **per layer** in the current direction.
+
+If a layer misses its rendering deadline, the RX660 simply does not request that layer's flip; the previous page remains visible for another frame.
+
+The exact PAGE/FLIP_REQUEST register placement is still an implementation choice, but the semantics are part of the architecture.
 
 ---
 
-## 12. Sprite/object model
+## 14. RX660-to-CPLD register interface
 
-Dedicated sprite scanout hardware is not currently required.
+The RX660 programs each layer controller through a small write-only register port, conceptually similar to a classic peripheral register interface.
 
-The RX660 implements sprite-like objects by drawing them into an overlay layer's inactive framebuffer page, normally Layer 1.
+Candidate shared signals:
 
-A moving object therefore becomes an RX660 operation such as:
+```text
+D0..D7       register data
+RS / register index mechanism
+/WR          write strobe
+```
+
+with one chip select per layer:
+
+```text
+/CS_L0
+/CS_L1
+/CS_L2
+```
+
+The current architecture does not require CPLD register readback. The RX660 owns the software-visible state and initializes all controller state after reset.
+
+The exact register map is not yet frozen.
+
+At minimum it must support programming retained `START`, flip request, and overlay blank state; the timing master additionally needs timing configuration only if runtime-programmable video timing is eventually desired.
+
+---
+
+## 15. Scrolling and parallax
+
+Because framebuffer storage is linear and byte-addressed, smooth scrolling is fundamentally a start-address operation.
+
+For the candidate 832-byte physical pitch:
+
+```text
+scroll right one source pixel:   START += 1
+scroll down one source line:     START += 832
+```
+
+The RX660 computes the desired START value and writes it to the appropriate layer controller.
+
+Each layer owns a separate START register, so independent scrolling is natural:
+
+```text
+L0 START -> distant background
+L1 START -> gameplay plane
+L2 START -> stationary HUD or independent overlay
+```
+
+This gives true per-layer parallax without a dedicated sprite or tile-scroll engine.
+
+The START value should normally be committed at a controlled frame boundary unless an intentional raster effect is desired.
+
+---
+
+## 16. Sprite/object model
+
+There is no dedicated sprite scanout unit in the present design.
+
+The RX660 implements objects by drawing them into an overlay framebuffer, normally Layer 1.
+
+Example abstraction:
 
 ```text
 SPRITE_DRAW(layer=1, object, x, y)
 ```
 
-The RX660 performs clipping, transparency/masking, and pixel writes into the back page. At VBlank the complete layer is flipped into view.
+The RX660 performs clipping, transparency/masking, and pixel writes into the inactive page. The finished page is then flipped into view.
 
-The scanout hardware sees only ordinary framebuffer pixels. There is no sprite-per-line limit, sprite evaluator, background restore problem, or tile palette-bank conflict.
+Advantages over software sprites composited into a tile map include:
 
-Layer 2 may independently carry UI, cursor, debug, or additional foreground graphics.
-
----
-
-## 13. Framebuffer fetch path
-
-For one layer, the real-time display path is intentionally short:
-
-```text
-raster position
-     |
-framebuffer address generator
-     |
-front SRAM
-     |
-pixel/word latch
-     |
-layer pixel[7:0]
-```
-
-With a 16-bit SRAM organization, one read returns two 8-bit pixels. A byte-select mux can then emit the two pixels on successive pixel clocks.
-
-```text
-16-bit SRAM word
-+----------+----------+
-| pixel N  | pixel N+1|
-+----------+----------+
-      |
-   word latch
-      |
- byte select
-      |
- 8-bit layer pixel
-```
-
-This allows the SRAM word-fetch rate to be approximately half the pixel rate.
-
-All three layers perform these accesses concurrently through their independent SRAM domains.
+- no background restoration in scanout hardware;
+- no sprite-per-line limit;
+- no dynamic tile-slot management;
+- no tile palette-bank conflict;
+- arbitrary pixel positioning;
+- simple overlap handled by the RX660 renderer;
+- the scanout hardware never needs to know what a sprite is.
 
 ---
 
-## 14. Clocking and pipeline timing
+## 17. Pixel compositor
 
-The high-frequency master/video clock remains useful even though the tile serializer is removed.
+The three registered layer pixels converge only at the compositor.
 
-Its job is to provide deterministic internal phases for operations such as:
+Priority is:
 
 ```text
-phase 0   present framebuffer address
-phase 1   allow SRAM access time
-phase 2   latch returned word
-phase 3   prepare next address / control transition
+if L2_PIXEL != 0 and !BLANK_L2:
+    OUT = L2_PIXEL
+elif L1_PIXEL != 0 and !BLANK_L1:
+    OUT = L1_PIXEL
+else:
+    OUT = L0_PIXEL
 ```
 
-The external pixel clock itself should remain regular. Fine scroll and layer positioning are achieved through address generation, not by stretching, suppressing, or irregularly shifting pixel-clock pulses.
+Layer 0 is always opaque.
 
-Timing-phase taps may be exposed or jumper-selectable during hardware characterization so latch/control transitions can be moved within the available SRAM timing window without a PCB respin.
+The current preferred implementation keeps the 24 incoming pixel bits **out of the CPLDs** and uses discrete fast logic near the ADV478.
+
+Conceptually:
+
+```text
+L0 ----\
+        MUX A ----\
+L1 ----/           MUX B ---> final register ---> ADV478
+                  /
+L2 ---------------
+```
+
+Two overlay opaque detectors produce the mux-select conditions.
+
+An 8-bit mux stage requires enough actual packages for an 8-bit datapath; generic references such as "74x157-class" describe the function, not necessarily a one-package implementation.
+
+The complete path must be timing-budgeted with the exact logic family:
+
+```text
+layer output register
+-> opaque detect
+-> mux stage A
+-> mux stage B
+-> final-register setup
+```
+
+The final output is registered before the RAMDAC.
 
 ---
 
-## 15. Normal host-to-screen transaction
+## 18. Raster timing
 
-A typical object draw illustrates the separation of responsibilities.
+Layer 0 contains the only full raster generator.
+
+Candidate primary mode:
+
+```text
+800 x 600 @ 60 Hz
+40.000 MHz pixel clock
+```
+
+The master CPLD maintains horizontal and vertical timing counters and derives HS, VS, active-display qualification, and synchronization strobes for the layer controllers.
+
+This is no longer constrained by the HD6445's MA width or character-clock ceiling.
+
+The architecture may support other timing profiles later, but the initial hardware should be designed around one thoroughly validated mode rather than adding multi-resolution complexity prematurely.
+
+### 18.1 Common timing distribution
+
+The blind layers must be locked to the master at the actual synchronous edge level.
+
+Do not rely on a master-generated DE transition appearing soon enough to be consumed by the blind CPLDs on the same pixel-clock edge that created it.
+
+The timing master should export explicit frame/line/active strobes on a phase that provides adequate setup to all three layer controllers.
+
+Likewise, all three SRAM output registers should receive a common capture clock/phase.
+
+This avoids deterministic one-pixel skew between layers.
+
+---
+
+## 19. Clocking
+
+One pixel-clock source feeds all three layer controllers and the pixel pipeline.
+
+For the 800x600 candidate:
+
+```text
+pixel clock = 40.000 MHz
+pixel period = 25 ns
+```
+
+A higher-frequency source or phase-generation chain may still be useful during bring-up to place:
+
+- address-counter transitions;
+- SRAM capture edges;
+- line/frame synchronization strobes;
+- final RAMDAC registration
+
+at experimentally favorable points inside the timing window.
+
+The philosophy remains: keep the displayed pixel clock regular; use internal phases to satisfy propagation/setup timing.
+
+---
+
+## 20. Part partition
+
+Current working part direction:
+
+```text
+L0 / Timing Master   ATF1508AS-AU100 class
+L1 controller        ATF1504AS-AU100 class
+L2 controller        ATF1504AS-AU100 class
+```
+
+The reason for the larger L0 part is macrocell/register pressure, not a fourth logical block.
+
+Each blind controller must retain both START and live ADDR, so a realistic blind-layer macrocell estimate includes at least:
+
+```text
+19  START bits
+19  ADDR bits
+ 1  PAGE
+ 1  FLIP_REQUEST
+ 1  BLANK (L1/L2)
+ + register-interface/control terms
+```
+
+The master additionally needs the raster counters and timing state.
+
+The fitter, not arithmetic estimates, decides final device fit.
+
+---
+
+## 21. Host-to-screen transaction
+
+A typical draw operation follows this path:
 
 ```text
 Host CPU
@@ -542,138 +771,120 @@ hardware FIFO
 RX660 ingress
    |
    v
-internal SRAM command queue
+RX660 SRAM command ring
    |
    v
-RX660 command consumer / renderer
+renderer
    |
-   | writes inactive Layer 1 page
+   | writes inactive framebuffer
    v
-Layer 1 BACK SRAM
+Layer N BACK SRAM
 ```
 
-At the same time, independently:
+Simultaneously:
 
 ```text
-CRTC raster timing
-      |
-      +-> Layer 0 FRONT SRAM -> L0 pixel --+
-      +-> Layer 1 FRONT SRAM -> L1 pixel --+-> compositor -> ADV478 -> RGB
-      +-> Layer 2 FRONT SRAM -> L2 pixel --+
+Layer 0 FRONT SRAM -> registered L0 pixel --\
+Layer 1 FRONT SRAM -> registered L1 pixel ----> compositor -> final reg -> ADV478
+Layer 2 FRONT SRAM -> registered L2 pixel --/
 ```
 
-At vertical blank, the requested front/back bank swap is committed and the new image becomes visible.
+At vertical blank, any requested per-layer bank swaps are committed.
 
-The key architectural boundary is therefore:
-
-> The host-to-RX660 side is a command-driven graphics renderer; the SRAM-to-RAMDAC side is a simple deterministic display engine. They meet at the framebuffer page boundary.
+The renderer and scanout are therefore decoupled at the framebuffer-page boundary.
 
 ---
 
-## 16. Relationship to the earlier tile-engine design
+## 22. Electrical design principles
 
-The earlier VDG architecture used:
+The architecture is intentionally biased toward electrically obvious ownership.
+
+- Three layers use three separate SRAM islands.
+- Pixel data does not traverse the CPLDs.
+- Video and RX660 normally operate on different physical SRAM packages.
+- Address/data/control ownership of A/B banks must nevertheless be explicitly steered.
+- Page ownership changes only at a controlled boundary.
+- No two devices may drive the same SRAM or data bus simultaneously.
+- Host FIFO overflow is prevented by hardware backpressure.
+- Intentional visual glitches may be tolerated for experiments; electrical bus fights are never tolerated.
+
+---
+
+## 23. What this architecture removes from the older design
 
 ```text
-CRTC -> tile map -> pattern memory -> serializer -> palette index
+REMOVED  HD6445 / MC6845-family CRTC
+REMOVED  14-bit MA ceiling
+REMOVED  character-clock ceiling
+REMOVED  RA-banked CGA-style framebuffer storage
+REMOVED  tilemap SRAM
+REMOVED  pattern SRAM
+REMOVED  ATTR/PIX tile palette split
+REMOVED  tile serializer
+REMOVED  coarse/fine tile-scroll mechanism
+REMOVED  dedicated sprite-engine requirement
+REMOVED  one shared MA stream for all layers
+
+ADDED    one local framebuffer CPLD per layer
+ADDED    L0 timing-master responsibility
+ADDED    19-bit retained START + live ADDR per layer
+ADDED    true independent per-layer pixel scroll
+ADDED    explicit A/B SRAM ownership steering
+ADDED    three direct pixel-rate SRAM read paths
 ```
 
-and contemplated multiple hardware modes, including tile-oriented modes and a framebuffer-like mode derived from CRTC raster addressing.
-
-The current direction is instead:
-
-```text
-CRTC timing -> framebuffer address -> pixel -> compositor -> palette index
-```
-
-Reasons for preferring one framebuffer architecture include:
-
-- simpler scanout hardware;
-- one programming/rendering model across resolutions;
-- straightforward pixel-level scrolling;
-- straightforward layer compositing;
-- sprite/object support without a dedicated sprite engine;
-- no tile-specific palette-bank limitation;
-- easier double buffering;
-- clearer separation between rendering and display;
-- the RX660 is powerful enough to provide tile/sprite/font abstractions in firmware.
-
-Tile-oriented commands remain valuable because they reduce host traffic and simplify game software, but they no longer imply tile-oriented display hardware.
+The design remains retro in structure — counters, SRAM, discrete pixel muxing, indexed RAMDAC — but no longer keeps the vintage CRTC when the framebuffer architecture would require substantial logic to work around it.
 
 ---
 
-## 17. Modes versus timing profiles
+## 24. Open questions / validation list
 
-The current preference is to avoid multiple fundamentally different graphics modes.
+The following items are deliberately not frozen:
 
-Different screen resolutions may still be supported as **timing profiles** if useful. Changing a timing profile can alter:
-
-- CRTC timing registers;
-- pixel clock;
-- visible width/height;
-- framebuffer pitch;
-- allowable framebuffer/page geometry.
-
-It should not change the fundamental rendering or scanout architecture.
-
-A candidate 800x600x8bpp profile is attractive because a double-buffered layer fits within about 1 MiB, but the final supported timing set is not yet frozen.
-
----
-
-## 18. Electrical and safety principles
-
-The VDG should permit intentional visual abuse without permitting electrical contention.
-
-Normal rules include:
-
-- scanout and rendering use different physical banks whenever possible;
-- page ownership changes only at a controlled boundary;
-- no two devices are allowed to drive the same bus simultaneously;
-- host FIFO overflow is prevented by hardware backpressure;
-- visible corruption caused by deliberately racing display updates may be acceptable in debug/demo scenarios, but bus fights are never acceptable.
+1. **A/B bank steering circuit.** This is now the highest-priority unresolved physical circuit: 19-bit address ownership, RX660 data path, `/CE`, `/OE`, `/WE`, and safe PAGE transition.
+2. **Blind-layer fitter result.** Confirm START + ADDR + register decode + PAGE/FLIP/BLANK fits comfortably in ATF1504AS-AU100.
+3. **Master fitter result.** Confirm raster counters + L0 framebuffer controller fit comfortably in ATF1508AS-AU100.
+4. **Exact SRAM part.** 512Kx8, approximately 10 ns is the current conceptual target; exact stocked 5 V part and package remain to be selected.
+5. **40 MHz timing closure.** Validate `CPLD tCO + SRAM tAA + routing + output-register setup` with exact parts and capture phase.
+6. **Common capture clock implementation.** All three layer pixel registers should capture on one controlled phase.
+7. **Master-to-slave timing strobes.** Establish line/frame reload timing with explicit setup margin; do not rely casually on same-edge DE fanout.
+8. **Physical framebuffer geometry.** 832x630 is an attractive 512 KiB candidate for an 800x600 viewport, but should be frozen only after scroll-margin requirements are agreed.
+9. **Register map.** Exact write-only RX660-to-CPLD register encoding.
+10. **Host FIFO implementation.** Exact glue part and host WAIT/READY wiring.
+11. **8-byte transport format.** Exact opcode/data-record semantics.
+12. **Compositor logic family and timing.** Select actual fast 8-bit mux and opaque-detect parts and verify the two-stage path to the final register.
+13. **ADV478 interface timing.** Verify final register edge and RAMDAC setup/hold against the chosen clock phase.
+14. **Runtime timing programmability.** Initial preference is one fixed, validated 800x600 timing; multi-resolution operation can be reconsidered later.
 
 ---
 
-## 19. Current open questions
+## 25. Current architectural summary
 
-The following items remain intentionally unfrozen:
+The current Afternoon Latte VDG is:
 
-1. Exact host-interface glue device and FIFO implementation.
-2. Exact 8-byte record encoding and command set.
-3. Whether bulk upload data shares the same record stream or receives a separate logical/physical channel.
-4. RX660 SRAM ring size and scheduling policy.
-5. Exact external SRAM part, width, and bank organization per layer.
-6. Final framebuffer capacity per layer.
-7. Final primary video timing/resolution; 800x600x8bpp is currently an attractive candidate, not a commitment.
-8. Whether all three layers always use identical pixel formats.
-9. Whether page flips are initially global-only or independently selectable per layer.
-10. Exact transparent-index and palette conventions.
-11. Exact CRTC-to-X/Y/address-generator implementation.
-12. Exact high-speed clock frequency, divider tree, and phase-selection mechanism.
-13. Whether the RX660 receives HS/VS interrupts for effects/scheduling beyond VBlank page management.
-14. Final rendering command semantics for sprites, tiles, fonts, blits, and dirty-region handling.
-
----
-
-## 20. Current architectural summary
-
-The present Afternoon Latte VDG concept is:
-
-- one 6345/6445-family CRTC used primarily for raster timing;
 - one RX660 graphics coprocessor;
-- a small hardware FIFO between host and RX660;
-- fixed-size 8-byte transport records as the current ingress proposal;
-- a larger command queue in RX660 internal SRAM;
+- one small host-side FIFO with hardware backpressure;
+- fixed 8-byte transport records as the current command-ingress proposal;
+- a larger command ring in RX660 internal SRAM;
 - three independent 8-bit indexed framebuffer layers;
-- physically separate VRAM domains per layer;
-- front/back framebuffer banks for double buffering;
-- RX660 ownership of inactive pages while video scans active pages;
-- independent per-layer base/pitch/scroll state;
-- hardware pixel-level scrolling through framebuffer address generation;
-- sprites, tiles, fonts, and blits implemented by RX660 firmware;
-- transparent priority composition of Layers 2, 1, and 0;
-- ADV478 indexed-color RAMDAC output;
-- a high-speed phased clock used to sequence deterministic SRAM/latch timing;
-- page changes committed at VBlank.
+- two physical SRAM banks per layer for front/back buffering;
+- one CPLD local to each framebuffer layer;
+- **three CPLDs total**;
+- Layer 0's CPLD is also the sole raster/sync timing master;
+- Layer 1 and Layer 2 are timing slaves;
+- retained START and live ADDR are separate registers/counters per layer;
+- candidate visible mode 800x600x8bpp at 60 Hz;
+- candidate physical framebuffer geometry 832x630x8bpp per 512 KiB page;
+- one byte/pixel SRAM fetch at pixel rate;
+- pixel data bypasses the CPLDs and enters common-clocked output registers;
+- sprites, tiles, text, and blits are RX660 firmware/rendering abstractions;
+- independent per-layer scrolling comes from independent START values;
+- page flips are RX660-requested and frame-boundary committed;
+- Layer 1/2 use index zero as transparency;
+- a discrete transparent-priority compositor selects L2, then L1, then L0;
+- the composited index is registered before the ADV478;
+- the biggest unresolved hardware block is the A/B SRAM ownership steering.
 
-The architecture is intentionally biased toward **simple deterministic scanout hardware plus a capable software-defined rendering front end**, rather than multiple specialized video engines.
+The guiding bias remains:
+
+> **simple deterministic scanout hardware + a capable software-defined renderer, with each electrical responsibility kept local and explicit.**
